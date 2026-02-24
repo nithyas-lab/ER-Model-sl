@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BevGenie Depletion Data Model — Sera Luce POC</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2332;--bdr:#1e293b;--bdr-a:#3b82f6;--tx:#e2e8f0;--txd:#64748b;--txb:#f8fafc;--acc:#3b82f6;--fact:#f59e0b;--factbg:rgba(245,158,11,.08);--factbd:rgba(245,158,11,.3);--dim:#10b981;--dimbg:rgba(16,185,129,.08);--dimbd:rgba(16,185,129,.3);--ref:#8b5cf6;--refbg:rgba(139,92,246,.08);--refbd:rgba(139,92,246,.3);--vip:#ec4899;--vipbg:rgba(236,72,153,.08);--sera:#06b6d4;--serabg:rgba(6,182,212,.08);--cwg:#f97316;--av:#22c55e;--vs:#a855f7;--pal:#ef4444;--hist:#64748b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);overflow-x:hidden;line-height:1.6}
+.noise{position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+header{position:relative;padding:2.5rem 2rem 1.8rem;text-align:center;background:linear-gradient(135deg,rgba(59,130,246,.05),rgba(139,92,246,.05),rgba(236,72,153,.03));border-bottom:1px solid var(--bdr)}
+header::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:200px;height:1px;background:linear-gradient(90deg,transparent,var(--acc),transparent)}
+h1{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,#e2e8f0,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em;margin-bottom:.4rem}
+.subtitle{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--txd);letter-spacing:.1em;text-transform:uppercase}
+.tags{display:flex;gap:.4rem;justify-content:center;margin-top:.8rem;flex-wrap:wrap}
+.tg{font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:.2rem .5rem;border-radius:99px;border:1px solid var(--bdr);color:var(--txd);letter-spacing:.05em}
+.tg.vip{border-color:var(--vip);color:var(--vip);background:var(--vipbg)}
+.tg.sera{border-color:var(--sera);color:var(--sera);background:var(--serabg)}
+nav{position:sticky;top:0;z-index:100;display:flex;border-bottom:1px solid var(--bdr);background:rgba(10,14,23,.95);backdrop-filter:blur(20px);overflow-x:auto}
+nav button{flex:1;min-width:fit-content;padding:.7rem 1rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--txd);font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+nav button:hover{color:var(--tx);background:rgba(255,255,255,.02)}
+nav button.active{color:var(--acc);border-bottom-color:var(--acc)}
+.sec{display:none;padding:2rem;max-width:1400px;margin:0 auto;position:relative;z-index:1}
+.sec.active{display:block;animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.st{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:.4rem;color:var(--txb)}
+.sd{font-size:.82rem;color:var(--txd);margin-bottom:1.8rem;max-width:700px}
+
+
+/* .et removed - using SVG ER */
+
+.et.fact:hover{border-color:var(--fact);box-shadow:0 0 25px var(--factbg)}
+.et.dim:hover{border-color:var(--dim);box-shadow:0 0 25px var(--dimbg)}
+.et.ref:hover{border-color:var(--ref);box-shadow:0 0 25px var(--refbg)}
+
+
+.et.fact 
+.et.dim 
+.et.ref 
+
+.et.fact .et.dim .et.ref 
+
+
+.ecl:hover{background:rgba(255,255,255,.03)}
+
+.ecl.pk .n{color:var(--fact);font-weight:600}.ecl.pk .n::before{content:'🔑 ';font-size:.55rem}
+.ecl.fk .n{color:var(--acc)}.ecl.fk .n::before{content:'→ ';color:var(--acc)}
+
+
+
+
+.zb{width:30px;height:30px;border-radius:7px;background:var(--bg2);border:1px solid var(--bdr);color:var(--txd);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.zb:hover{border-color:var(--acc);color:var(--tx)}
+.dp{position:fixed;top:0;right:-500px;width:480px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);z-index:200;transition:right .3s ease;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.5)}
+.dp.open{right:0}
+.dc{position:absolute;top:1rem;right:1rem;width:30px;height:30px;background:none;border:1px solid var(--bdr);border-radius:7px;color:var(--txd);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+.dc:hover{border-color:var(--acc);color:var(--tx)}
+.dpc{padding:1.8rem}
+.dpc h2{font-family:'IBM Plex Mono',monospace;font-size:1.05rem;margin-bottom:.2rem}
+.dpc .veq{font-size:.72rem;color:var(--vip);margin-bottom:1.2rem;font-family:'IBM Plex Mono',monospace}
+.dt{width:100%;border-collapse:collapse;font-size:.7rem;margin-bottom:1.2rem}
+.dt th{text-align:left;padding:.35rem .45rem;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--txd);border-bottom:1px solid var(--bdr);text-transform:uppercase;letter-spacing:.08em}
+.dt td{padding:.3rem .45rem;border-bottom:1px solid rgba(30,41,59,.5);font-family:'IBM Plex Mono',monospace;vertical-align:top}
+.dt tr:hover td{background:rgba(255,255,255,.02)}
+.stag{display:inline-block;font-size:.56rem;padding:.08rem .3rem;border-radius:3px;margin:.08rem .03rem;font-family:'IBM Plex Mono',monospace}
+.stag.cwg{background:rgba(249,115,22,.15);color:var(--cwg)}
+.stag.av{background:rgba(34,197,94,.15);color:var(--av)}
+.stag.vs{background:rgba(168,85,247,.15);color:var(--vs)}
+.stag.pal{background:rgba(239,68,68,.15);color:var(--pal)}
+.stag.hist{background:rgba(100,116,139,.15);color:var(--hist)}
+.vc{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.4rem;margin-bottom:1.1rem;transition:all .2s}
+.vc:hover{border-color:var(--bdr-a)}
+.vc h3{font-family:'IBM Plex Mono',monospace;font-size:.88rem;color:var(--txb);margin-bottom:.2rem}
+.vc .vn{font-size:.72rem;color:var(--vip);margin-bottom:.7rem}
+.mr{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;padding:.22rem 0;font-family:'IBM Plex Mono',monospace;font-size:.68rem}
+.mr .aw{text-align:center;color:var(--acc);font-size:.85rem}
+.mr .vs{color:var(--vip);text-align:right;padding-right:.4rem}
+.mr .ss{color:var(--sera);padding-left:.4rem}
+.mh{display:grid;grid-template-columns:1fr 28px 1fr;font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--txd);padding-bottom:.25rem;margin-bottom:.35rem;border-bottom:1px solid var(--bdr)}
+.mh span:first-child{text-align:right;padding-right:.4rem}
+.mh span:last-child{padding-left:.4rem}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.1rem}
+.fc{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.1rem;transition:all .2s}
+.fc:hover{border-color:var(--bdr-a)}
+.fc h4{font-family:'IBM Plex Mono',monospace;font-size:.82rem;display:flex;align-items:center;gap:.45rem;margin-bottom:.7rem}
+.fd{width:8px;height:8px;border-radius:50%}
+.fl{list-style:none;padding:0}
+.fl li{font-family:'IBM Plex Mono',monospace;font-size:.66rem;padding:.15rem 0;color:var(--txd);display:flex;align-items:baseline;gap:.35rem}
+.fl li .fn{color:var(--tx);min-width:140px}
+.fl li .fa{color:var(--acc)}
+.fl li .ft{color:var(--dim)}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1rem}
+.cc{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;transition:all .2s}
+.cc:hover{border-color:var(--bdr-a)}
+.cch{padding:.7rem .9rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--bdr)}
+.cch .ci{font-size:1.4rem}
+.cch h4{font-family:'IBM Plex Mono',monospace;font-size:.78rem}
+.cch .cv{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:.95rem;font-weight:700}
+.ccb{padding:.7rem .9rem;font-size:.73rem}
+.ccb .fm{font-family:'IBM Plex Mono',monospace;background:rgba(59,130,246,.08);padding:.25rem .45rem;border-radius:4px;margin:.35rem 0;color:var(--acc);font-size:.68rem}
+.lg{display:flex;gap:1.3rem;margin-bottom:1.3rem;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:.35rem;font-size:.73rem}
+.ld{width:10px;height:10px;border-radius:3px}
+.hbox{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.5rem;margin-bottom:1.2rem}
+.htree{padding-left:0}
+.htree li{list-style:none;padding:.3rem 0;position:relative}
+.htree li::before{content:'';position:absolute;left:-16px;top:0;bottom:0;width:1px;background:var(--bdr)}
+.htree li::after{content:'';position:absolute;left:-16px;top:14px;width:12px;height:1px;background:var(--bdr)}
+.htree>li::before,.htree>li::after{display:none}
+.htree ul{padding-left:28px}
+.htree .hn{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--tx);display:inline-flex;align-items:center;gap:.4rem}
+.htree .hv{font-size:.65rem;color:var(--vip);background:var(--vipbg);padding:.1rem .35rem;border-radius:3px}
+.htree .hs{font-size:.65rem;color:var(--sera);background:var(--serabg);padding:.1rem .35rem;border-radius:3px}
+.pstep{display:flex;gap:0;margin-bottom:1.5rem;flex-wrap:wrap}
+.ps{flex:1;min-width:180px;padding:1rem;border:1px solid var(--bdr);position:relative;background:var(--bg2)}
+.ps:first-child{border-radius:10px 0 0 10px}
+.ps:last-child{border-radius:0 10px 10px 0}
+.ps::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--acc);font-size:1.1rem;z-index:3;background:var(--bg);width:16px;text-align:center}
+.ps:last-child::after{display:none}
+.ps h4{font-family:'IBM Plex Mono',monospace;font-size:.78rem;margin-bottom:.4rem}
+.ps p{font-size:.7rem;color:var(--txd)}
+.ps .pvip{font-size:.62rem;color:var(--vip);margin-top:.3rem;font-family:'IBM Plex Mono',monospace}
+@media(max-width:768px){h1{font-size:1.5rem}.sec{padding:1rem}.dp{width:100%;right:-100%}nav button{font-size:.68rem;padding:.55rem .7rem}.pstep{flex-direction:column}.ps::after{display:none}}
+
+.biz-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:.9rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.biz-card:hover{border-color:var(--bdr-a);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.biz-card.biz-cwg{border-left:3px solid var(--cwg)}.biz-card.biz-av{border-left:3px solid var(--av)}
+.biz-card.biz-vs{border-left:3px solid var(--vs)}.biz-card.biz-pal{border-left:3px solid var(--pal)}
+.biz-icon{font-size:1.5rem;margin-bottom:.3rem}
+.biz-title{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--txb);font-weight:600;margin-bottom:.2rem}
+.biz-sub{font-size:.72rem;color:var(--tx);margin-bottom:.3rem}
+.biz-data{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--txd);padding-top:.3rem;border-top:1px solid var(--bdr)}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<header>
+  <h1>BevGenie Depletion Data Model</h1>
+  <p class="subtitle">Sera Luce Pilot</p>
+</header>
+<nav id="nav">
+  <button class="active" data-tab="biz">Business View</button>
+  <button data-tab="er">ER Diagram</button>
+  <button data-tab="vip">VIP ↔ BevGenie</button>
+  <button data-tab="sources">Source Files</button>
+  <button data-tab="ce">Unit Conversion</button>
+  <button data-tab="hierarchy">Hierarchies</button>
+  <button data-tab="pipeline">ETL Pipeline</button>
+</nav>
+
+<!-- SECTIONS -->
+
+<div class="sec active" id="sec-biz">
+  <div class="st">How Sera Luce's Business Works</div>
+  <div class="sd">This is what Justin sees every day — his product moving through the alcohol distribution chain. Each bubble is a real-world entity; click to see how it maps to the data model underneath.</div>
+
+  
+  <!-- BUSINESS ENTITY RELATIONSHIP DIAGRAM -->
+  <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:1.5rem;margin-bottom:2rem;overflow-x:auto">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--txb);font-weight:600;margin-bottom:.3rem">How Everything Connects</div>
+    <div style="font-size:.73rem;color:var(--txd);margin-bottom:1.2rem">Lines show how entities relate — this is the same structure as the technical ER diagram, but in Justin's language</div>
+    <svg viewBox="0 0 1100 620" style="width:100%;max-width:1100px;height:auto;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3b82f6" opacity=".7"/></marker>
+        <marker id="ahg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#10b981" opacity=".7"/></marker>
+        <marker id="aho" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f59e0b" opacity=".7"/></marker>
+        <filter id="gl"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <!-- CONNECTION LINES -->
+      <!-- Justin -> Importer -->
+      <path d="M220,75 L220,130" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#ah)" opacity=".6"/>
+      <!-- Importer -> Distributors -->
+      <path d="M220,195 C220,240 160,260 160,285" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#ah)" opacity=".5" stroke-dasharray="6,3"/>
+      <path d="M220,195 C220,240 380,260 380,285" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#ah)" opacity=".5" stroke-dasharray="6,3"/>
+      <path d="M220,195 C220,240 600,260 600,285" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#ah)" opacity=".5" stroke-dasharray="6,3"/>
+      <path d="M220,195 C220,260 820,260 820,285" stroke="#06b6d4" stroke-width="2" fill="none" marker-end="url(#ah)" opacity=".5" stroke-dasharray="6,3"/>
+      
+      <!-- Distributors -> Accounts (the key relationship) -->
+      <path d="M160,355 C160,390 200,410 200,430" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#ahg)" opacity=".6"/>
+      <path d="M380,355 C380,390 400,410 400,430" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#ahg)" opacity=".6"/>
+      <path d="M600,355 C600,390 600,410 600,430" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#ahg)" opacity=".6"/>
+      <path d="M820,355 C820,390 750,410 750,430" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#ahg)" opacity=".6"/>
+      
+      <!-- Accounts -> Sale Event (fact) -->
+      <path d="M300,510 L480,555" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#aho)" opacity=".5"/>
+      <path d="M500,510 L540,555" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#aho)" opacity=".5"/>
+      <path d="M700,510 L600,555" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#aho)" opacity=".5"/>
+
+      <!-- Product connects to Sale -->
+      <path d="M850,160 C950,160 980,400 900,570 L660,580" stroke="#8b5cf6" stroke-width="1.5" fill="none" marker-end="url(#ah)" opacity=".4" stroke-dasharray="4,3"/>
+      <!-- Date connects to Sale -->
+      <path d="M980,320 C1020,320 1050,500 900,580 L660,585" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#ah)" opacity=".3" stroke-dasharray="4,3"/>
+      <!-- Sales Rep connects to Sale -->
+      <path d="M980,440 C1020,460 1000,540 720,580 L660,580" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#ah)" opacity=".3" stroke-dasharray="4,3"/>
+
+      <!-- ===== ENTITY BOXES ===== -->
+      
+      <!-- JUSTIN / SERA LUCE (Producer) -->
+      <rect x="100" y="25" width="240" height="50" rx="12" fill="#0a0e17" stroke="#06b6d4" stroke-width="2"/>
+      <text x="220" y="48" text-anchor="middle" fill="#06b6d4" font-family="monospace" font-size="11" font-weight="bold">🍹 SERA LUCE (Justin)</text>
+      <text x="220" y="65" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="9">Producer — Venetian Spritz RTD</text>
+
+      <!-- IMPORTER -->
+      <rect x="80" y="130" width="280" height="65" rx="10" fill="#0a0e17" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="220" y="152" text-anchor="middle" fill="#06b6d4" font-family="monospace" font-size="10" font-weight="bold">🚢 IMPORTER</text>
+      <text x="220" y="168" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9.5">Sette Sei / Am. Spirits Exchange</text>
+      <text x="220" y="183" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">NOT a distributor — lives on dim_product</text>
+
+      <!-- DISTRIBUTORS -->
+      <rect x="50" y="285" width="220" height="70" rx="10" fill="#0a0e17" stroke="#f97316" stroke-width="2"/>
+      <text x="160" y="308" text-anchor="middle" fill="#f97316" font-family="monospace" font-size="10" font-weight="bold">🟠 Curated Wine Group</text>
+      <text x="160" y="323" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">South Carolina</text>
+      <text x="160" y="340" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Reports: CARTONS (÷6 for cases)</text>
+
+      <rect x="280" y="285" width="200" height="70" rx="10" fill="#0a0e17" stroke="#22c55e" stroke-width="2"/>
+      <text x="380" y="308" text-anchor="middle" fill="#22c55e" font-family="monospace" font-size="10" font-weight="bold">🟢 Artisans & Vines</text>
+      <text x="380" y="323" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">DC, MD, VA</text>
+      <text x="380" y="340" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Reports: Cases (format changes!)</text>
+
+      <rect x="490" y="285" width="220" height="70" rx="10" fill="#0a0e17" stroke="#a855f7" stroke-width="2"/>
+      <text x="600" y="308" text-anchor="middle" fill="#a855f7" font-family="monospace" font-size="10" font-weight="bold">🟣 Vintage Imports</text>
+      <text x="600" y="323" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">NJ, PA (Apprise system)</text>
+      <text x="600" y="340" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Reports: 4-packs (richest data!)</text>
+
+      <rect x="720" y="285" width="200" height="70" rx="10" fill="#0a0e17" stroke="#ef4444" stroke-width="2"/>
+      <text x="820" y="308" text-anchor="middle" fill="#ef4444" font-family="monospace" font-size="10" font-weight="bold">🔴 PA Libations</text>
+      <text x="820" y="323" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">Pennsylvania (Square POS)</text>
+      <text x="820" y="340" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Reports: Mixed retail + wholesale</text>
+      
+      <!-- ACCOUNTS -->
+      <rect x="120" y="430" width="200" height="80" rx="10" fill="#0a0e17" stroke="#10b981" stroke-width="2"/>
+      <text x="220" y="455" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="10" font-weight="bold">🍸 Bars & Restaurants</text>
+      <text x="220" y="472" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">On-Premise accounts</text>
+      <text x="220" y="487" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Kegs + cans by the drink</text>
+      <text x="220" y="500" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="7.5">dim_account + premise_type = ON</text>
+
+      <rect x="380" y="430" width="240" height="80" rx="10" fill="#0a0e17" stroke="#10b981" stroke-width="2"/>
+      <text x="500" y="455" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="10" font-weight="bold">🏪 Wine Shops & Liquor Stores</text>
+      <text x="500" y="472" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">Off-Premise accounts</text>
+      <text x="500" y="487" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">4-packs & cases for take-home</text>
+      <text x="500" y="500" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="7.5">dim_account + premise_type = OFF</text>
+
+      <rect x="630" y="430" width="200" height="80" rx="10" fill="#0a0e17" stroke="#10b981" stroke-width="2"/>
+      <text x="730" y="455" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="10" font-weight="bold">🛒 Grocery Chains</text>
+      <text x="730" y="472" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9">Off-Premise (chain accounts)</text>
+      <text x="730" y="487" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8">Total Wine, Whole Foods etc.</text>
+      <text x="730" y="500" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="7.5">dim_account + chain_name filled</text>
+
+      <!-- SALE EVENT (Fact) -->
+      <rect x="400" y="555" width="260" height="55" rx="8" fill="rgba(245,158,11,.08)" stroke="#f59e0b" stroke-width="2.5"/>
+      <text x="530" y="578" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="11" font-weight="bold">💰 EACH SALE (Depletion)</text>
+      <text x="530" y="596" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="8.5">When + What + Where + How Much = fact_depletion</text>
+
+      <!-- SIDE ENTITIES -->
+      <!-- Products -->
+      <rect x="750" y="110" width="200" height="60" rx="8" fill="#0a0e17" stroke="#8b5cf6" stroke-width="1.5"/>
+      <text x="850" y="133" text-anchor="middle" fill="#8b5cf6" font-family="monospace" font-size="10" font-weight="bold">📦 Products (What)</text>
+      <text x="850" y="148" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="8.5">Cans, 4-packs, Cases, Kegs</text>
+      <text x="850" y="161" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="7.5">dim_product + CE_RATIO</text>
+
+      <!-- Calendar -->
+      <rect x="880" y="290" width="180" height="55" rx="8" fill="#0a0e17" stroke="#64748b" stroke-width="1.5"/>
+      <text x="970" y="313" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="10" font-weight="bold">📅 Calendar (When)</text>
+      <text x="970" y="330" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">Month, Quarter, R3/R6/R12</text>
+      <text x="970" y="340" text-anchor="middle" fill="#475569" font-family="monospace" font-size="7.5">dim_date</text>
+
+      <!-- Sales Reps -->
+      <rect x="880" y="410" width="180" height="55" rx="8" fill="#0a0e17" stroke="#64748b" stroke-width="1.5"/>
+      <text x="970" y="433" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="10" font-weight="bold">👤 Sales Reps (Who)</text>
+      <text x="970" y="448" text-anchor="middle" fill="#64748b" font-family="monospace" font-size="8.5">Joe, Larry, Justin Pass</text>
+      <text x="970" y="458" text-anchor="middle" fill="#475569" font-family="monospace" font-size="7.5">dim_sales_rep</text>
+
+      <!-- Geography badge near accounts -->
+      <rect x="15" y="460" width="100" height="45" rx="6" fill="#0a0e17" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="65" y="478" text-anchor="middle" fill="#3b82f6" font-family="monospace" font-size="8" font-weight="bold">🗺️ Geography</text>
+      <text x="65" y="492" text-anchor="middle" fill="#475569" font-family="monospace" font-size="7">ZIP→Census</text>
+      <line x1="115" y1="483" x2="120" y2="483" stroke="#3b82f6" stroke-width="1" opacity=".4"/>
+
+      <!-- Legend -->
+      <text x="15" y="580" fill="#64748b" font-family="monospace" font-size="8">━━ direct relationship</text>
+      <text x="15" y="595" fill="#64748b" font-family="monospace" font-size="8">╌╌ routes through / references</text>
+      <text x="15" y="610" fill="#64748b" font-family="monospace" font-size="8">▶ direction of data flow</text>
+  
+    <!-- Click targets -->
+    <rect x="480" y="20" width="240" height="206" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_product"/>
+    <rect x="430" y="360" width="240" height="226" fill="transparent" style="cursor:pointer" class="er-click" data-table="fact_depletion"/>
+    <rect x="30" y="330" width="240" height="186" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_date"/>
+    <rect x="30" y="620" width="240" height="206" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_distributor"/>
+    <rect x="850" y="200" width="240" height="226" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_account"/>
+    <rect x="200" y="620" width="240" height="146" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_sales_rep"/>
+    <rect x="850" y="580" width="240" height="186" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_geography"/>
+    <rect x="1200" y="120" width="220" height="106" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_premise_type"/>
+    <rect x="1200" y="310" width="220" height="126" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_channel_format"/>
+    <rect x="1200" y="490" width="220" height="106" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_account_status"/>
+    <rect x="480" y="720" width="220" height="146" fill="transparent" style="cursor:pointer" class="er-click" data-table="dim_product_format"/>
+  </svg>
+  </div>
+
+  <!-- MIND MAP -->
+  <div style="position:relative;background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:2rem;margin-bottom:2rem;overflow:hidden">
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 30% 40%,rgba(6,182,212,.04),transparent 50%),radial-gradient(ellipse at 70% 60%,rgba(245,158,11,.04),transparent 50%);pointer-events:none"></div>
+
+    <!-- Central node -->
+    <div style="text-align:center;margin-bottom:2.5rem;position:relative">
+      <div style="display:inline-block;background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(59,130,246,.15));border:2px solid var(--sera);border-radius:16px;padding:1.2rem 2.5rem;position:relative">
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--txb);font-weight:700">🍹 Sera Luce</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sera);margin-top:.2rem">Venetian Spritz — Wine-Based RTD Aperitif</div>
+        <div style="font-size:.65rem;color:var(--txd);margin-top:.3rem">Founded by Justin Pass · 250mL cans & 20L kegs</div>
+      </div>
+    </div>
+
+    <!-- The Story Flow -->
+    <div style="max-width:1100px;margin:0 auto">
+
+      <!-- Row 1: The Product -->
+      <div style="margin-bottom:2rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--txd);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.6rem;padding-left:.5rem">① What Justin Sells</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem">
+          <div class="biz-card" onclick="showBizDetail('product_can')">
+            <div class="biz-icon">🥫</div>
+            <div class="biz-title">250mL Cans</div>
+            <div class="biz-sub">Sold as 4-packs · 6 four-packs = 1 case</div>
+            <div class="biz-data">dim_product · ce_ratio = 1/6 per 4-pack</div>
+          </div>
+          <div class="biz-card" onclick="showBizDetail('product_keg')">
+            <div class="biz-icon">🍺</div>
+            <div class="biz-title">20L Kegs</div>
+            <div class="biz-sub">For bars & restaurants · 1/6 BBL</div>
+            <div class="biz-data">dim_product · tracked separately (not in CE)</div>
+          </div>
+          <div class="biz-card" style="border-color:rgba(6,182,212,.3)" onclick="showBizDetail('importer')">
+            <div class="biz-icon">🚢</div>
+            <div class="biz-title">Importer</div>
+            <div class="biz-sub">Sette Sei / American Spirits Exchange</div>
+            <div class="biz-data">dim_product.importer_name — NOT a distributor!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align:center;font-size:1.5rem;color:var(--acc);margin:.5rem 0">▼ Product flows through the three-tier system ▼</div>
+
+      <!-- Row 2: Distributors -->
+      <div style="margin-bottom:2rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--txd);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.6rem;padding-left:.5rem">② Who Distributes It <span style="color:var(--dim)">(dim_distributor)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem">
+          <div class="biz-card biz-cwg" onclick="showBizDetail('dist_cwg')">
+            <div class="biz-icon">🟠</div>
+            <div class="biz-title">Curated Wine Group</div>
+            <div class="biz-sub">South Carolina · Reports in cartons (÷6 for cases)</div>
+            <div class="biz-data">distributor_id = CWG · report_unit = cartons</div>
+          </div>
+          <div class="biz-card biz-av" onclick="showBizDetail('dist_av')">
+            <div class="biz-icon">🟢</div>
+            <div class="biz-title">Artisans & Vines</div>
+            <div class="biz-sub">DC, Maryland, Virginia · Format changes monthly!</div>
+            <div class="biz-data">distributor_id = AV · report_unit = cases</div>
+          </div>
+          <div class="biz-card biz-vs" onclick="showBizDetail('dist_vs')">
+            <div class="biz-icon">🟣</div>
+            <div class="biz-title">Vintage Imports</div>
+            <div class="biz-sub">New Jersey, Pennsylvania · Richest data (Apprise)</div>
+            <div class="biz-data">distributor_id = VS · report_unit = base UM (4-packs)</div>
+          </div>
+          <div class="biz-card biz-pal" onclick="showBizDetail('dist_pal')">
+            <div class="biz-icon">🔴</div>
+            <div class="biz-title">PA Libations</div>
+            <div class="biz-sub">Pennsylvania · Mixed retail + wholesale (Square POS)</div>
+            <div class="biz-data">distributor_id = PAL · report_unit = mixed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align:center;font-size:1.5rem;color:var(--acc);margin:.5rem 0">▼ Distributors sell to accounts ▼</div>
+
+      <!-- Row 3: Accounts -->
+      <div style="margin-bottom:2rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--txd);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.6rem;padding-left:.5rem">③ Where It Ends Up <span style="color:var(--dim)">(dim_account — THE key dimension for BevGenie)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem">
+          <div class="biz-card" onclick="showBizDetail('acct_on')">
+            <div class="biz-icon">🍸</div>
+            <div class="biz-title">Bars & Restaurants</div>
+            <div class="biz-sub">On-Premise · Kegs & cans by the drink</div>
+            <div class="biz-data">premise_type = ON · Higher margins</div>
+          </div>
+          <div class="biz-card" onclick="showBizDetail('acct_off')">
+            <div class="biz-icon">🏪</div>
+            <div class="biz-title">Wine Shops & Liquor Stores</div>
+            <div class="biz-sub">Off-Premise · 4-packs & cases for take-home</div>
+            <div class="biz-data">premise_type = OFF · Volume driver</div>
+          </div>
+          <div class="biz-card" onclick="showBizDetail('acct_retail')">
+            <div class="biz-icon">🛒</div>
+            <div class="biz-title">Grocery & Supermarkets</div>
+            <div class="biz-sub">Off-Premise · Chain accounts · Higher ACV</div>
+            <div class="biz-data">premise_type = OFF · chain_name populated</div>
+          </div>
+          <div class="biz-card" onclick="showBizDetail('acct_detail')">
+            <div class="biz-icon">📋</div>
+            <div class="biz-title">Account Details We Track</div>
+            <div class="biz-sub">Address, ZIP (→Census), license #, chain, first/last purchase</div>
+            <div class="biz-data">For "find me similar accounts" — the BevGenie use case</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align:center;font-size:1.5rem;color:var(--acc);margin:.5rem 0">▼ Every sale becomes a transaction record ▼</div>
+
+      <!-- Row 4: The Sale (Fact) -->
+      <div style="margin-bottom:2rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--txd);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.6rem;padding-left:.5rem">④ Each Sale We Record <span style="color:var(--fact)">(fact_depletion — one row per transaction)</span></div>
+        <div style="background:var(--factbg);border:1px solid var(--factbd);border-radius:12px;padding:1.2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem">
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">📅</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">When?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Date of the sale</div>
+            <div style="font-size:.6rem;color:var(--txd)">→ dim_date</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">📦</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">What?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Cans or kegs, how many</div>
+            <div style="font-size:.6rem;color:var(--txd)">→ dim_product + sold_qty</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">🏪</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">Where?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Which bar/store bought it</div>
+            <div style="font-size:.6rem;color:var(--txd)">→ dim_account</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">🚚</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">Through whom?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Which distributor moved it</div>
+            <div style="font-size:.6rem;color:var(--txd)">→ dim_distributor</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">👤</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">Who sold it?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Sales rep on the account</div>
+            <div style="font-size:.6rem;color:var(--txd)">→ dim_sales_rep</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:1.8rem">💰</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--fact);font-weight:600">For how much?</div>
+            <div style="font-size:.7rem;color:var(--tx)">Price, discounts, net</div>
+            <div style="font-size:.6rem;color:var(--txd)">gross_price, net_price</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 5: Geography & Analysis -->
+      <div style="margin-bottom:1rem">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--txd);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.6rem;padding-left:.5rem">⑤ The Questions Justin Wants Answered</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.8rem">
+          <div class="biz-card" style="border-color:rgba(245,158,11,.3)">
+            <div class="biz-title" style="color:var(--fact)">💡 "Find me more accounts like my best ones"</div>
+            <div class="biz-sub">dim_account (ZIP → Census demographics) + dim_geography (FIPS, MSA) + premise_type + channel_format → lookalike scoring</div>
+          </div>
+          <div class="biz-card" style="border-color:rgba(245,158,11,.3)">
+            <div class="biz-title" style="color:var(--fact)">📊 "How are my distributors performing?"</div>
+            <div class="biz-sub">fact_depletion grouped by distributor_sid → cases/month, active accounts, new vs repeat buyers, rep productivity</div>
+          </div>
+          <div class="biz-card" style="border-color:rgba(245,158,11,.3)">
+            <div class="biz-title" style="color:var(--fact)">🗺️ "Where should I expand next?"</div>
+            <div class="biz-sub">dim_geography (state, county, MSA) + Census data + account density → white space analysis across TX, FL targets</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- IMPORTER EXPLAINER -->
+  <div style="background:var(--bg2);border:1px solid rgba(6,182,212,.3);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem">
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem">
+      <span style="font-size:1.1rem">🚢</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--sera);font-weight:600">Why the Importer Is NOT a Distributor</span>
+    </div>
+    <p style="font-size:.78rem;color:var(--tx);margin-bottom:.5rem"><b>Sette Sei / American Spirits Exchange</b> is the <b>importer</b> — they handle federal compliance (TTB COLA approvals), bring the product into the US, and then route it to actual distributors. In the three-tier system:</p>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;margin:.6rem 0;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+      <span style="background:rgba(6,182,212,.12);color:var(--sera);padding:.3rem .6rem;border-radius:6px">Justin (Producer)</span>
+      <span style="color:var(--acc)">→</span>
+      <span style="background:rgba(6,182,212,.12);color:var(--sera);padding:.3rem .6rem;border-radius:6px">Sette Sei (Importer)</span>
+      <span style="color:var(--acc)">→</span>
+      <span style="background:rgba(16,185,129,.12);color:var(--dim);padding:.3rem .6rem;border-radius:6px">CWG / A&V / VS / PAL (Distributors)</span>
+      <span style="color:var(--acc)">→</span>
+      <span style="background:rgba(245,158,11,.12);color:var(--fact);padding:.3rem .6rem;border-radius:6px">Bars, Stores (Accounts)</span>
+    </div>
+    <p style="font-size:.73rem;color:var(--txd)">In our model: importer lives on <code style="background:rgba(6,182,212,.1);padding:.1rem .3rem;border-radius:3px;color:var(--sera)">dim_product.importer_name</code> (brand-level property). Distributors who actually deliver to accounts are in <code style="background:rgba(16,185,129,.1);padding:.1rem .3rem;border-radius:3px;color:var(--dim)">dim_distributor</code>.</p>
+  </div>
+
+  <!-- DATA MODEL ↔ BUSINESS ENTITY KEY -->
+  <div style="background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:1.2rem">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--txb);font-weight:600;margin-bottom:.8rem">Rosetta Stone: Business Language ↔ Data Model</div>
+    <table class="dt">
+      <thead><tr><th>Justin Says...</th><th>Data Model Term</th><th>Table</th><th>Why It Matters</th></tr></thead>
+      <tbody>
+        <tr><td>"My Venetian Spritz cans"</td><td>Product (SKU)</td><td style="color:var(--dim)">dim_product</td><td>Tracks every format: single can, 4-pack, case, keg</td></tr>
+        <tr><td>"My importer, Sette Sei"</td><td>Importer</td><td style="color:var(--dim)">dim_product.importer_name</td><td>Brand-level — same importer for all products</td></tr>
+        <tr><td>"Curated handles South Carolina"</td><td>Distributor</td><td style="color:var(--dim)">dim_distributor</td><td>Who delivers to accounts, by state/region</td></tr>
+        <tr><td>"That wine shop in Charleston"</td><td>Account (Retail)</td><td style="color:var(--dim)">dim_account</td><td>THE key entity — bars, stores, restaurants that buy</td></tr>
+        <tr><td>"On-premise vs off-premise"</td><td>Premise Type</td><td style="color:var(--ref)">dim_premise_type</td><td>Bars/restaurants (ON) vs stores (OFF)</td></tr>
+        <tr><td>"I sold 15 cases in December"</td><td>Depletion</td><td style="color:var(--fact)">fact_depletion</td><td>Each sale: what, where, when, how much</td></tr>
+        <tr><td>"Cases" (but they all count differently!)</td><td>Case Equivalent (CE)</td><td style="color:var(--fact)">sold_qty_ce</td><td>Normalizes cartons, 4-packs, singles → standard cases</td></tr>
+        <tr><td>"My rep Joe in DC"</td><td>Sales Rep</td><td style="color:var(--dim)">dim_sales_rep</td><td>Which distributor rep covers which accounts</td></tr>
+        <tr><td>"Find me accounts like my best ones"</td><td>Lookalike Analysis</td><td style="color:var(--dim)">dim_account + dim_geography</td><td>ZIP → Census, FIPS, MSA codes for matching</td></tr>
+        <tr><td>"R3, R6, R12 rolling metrics"</td><td>Rolling Periods</td><td style="color:var(--dim)">dim_date</td><td>3/6/12-month rolling totals Justin already uses</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="sec" id="sec-er">
+  <div class="st">Entity Relationship Diagram</div>
+  <div class="sd">Click any table for full column details. Dashed lines show FK relationships.</div>
+  <div id="er-container" style="background:var(--bg);border:1px solid var(--bdr);border-radius:12px;padding:1rem;overflow-x:auto;position:relative">
+    <svg id="er-svg" viewBox="0 0 1430 998" style="width:100%;min-width:900px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">
+      <!-- Lines -->
+            <path d="M545,370 C545,313 605,313 605,256" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M420,488 C345,488 345,458 270,458" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M670,488 C745,488 745,328 820,328" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M545,606 C545,623 405,623 405,640" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M545,606 C545,623 145,623 145,640" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M1070,328 C1125,328 1125,182 1180,182" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M1070,328 C1125,328 1125,372 1180,372" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M1070,328 C1125,328 1125,552 1180,552" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M945,446 C945,508 945,508 945,570" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M605,256 C605,528 590,528 590,800" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <path d="M280,714 C275,714 275,747 270,747" fill="none" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      
+      <!-- Tables -->
+            <g class="tbl" data-id="dim_product" style="cursor:pointer">
+      <rect x="480" y="20" width="250" height="236" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="480" y="20" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="480" y="46" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="494" cy="35" r="4" fill="#10b981"/>
+      <text x="504" y="40" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_product</text>
+      <text x="490" y="66" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="508" y="66" fill="#f59e0b" font-family="monospace" font-size="10">product_sid</text>
+      <text x="720" y="66" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="508" y="88" fill="#e2e8f0" font-family="monospace" font-size="10">product_code</text>
+      <text x="720" y="88" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="110" fill="#e2e8f0" font-family="monospace" font-size="10">product_name</text>
+      <text x="720" y="110" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="132" fill="#e2e8f0" font-family="monospace" font-size="10">brand</text>
+      <text x="720" y="132" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="154" fill="#e2e8f0" font-family="monospace" font-size="10">sub_brand</text>
+      <text x="720" y="154" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="176" fill="#e2e8f0" font-family="monospace" font-size="10">product_class</text>
+      <text x="720" y="176" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="492" y="198" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="508" y="198" fill="#3b82f6" font-family="monospace" font-size="10">→ product_format_sid</text>
+      <text x="720" y="198" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="508" y="220" fill="#e2e8f0" font-family="monospace" font-size="10">unit_size_ml</text>
+      <text x="720" y="220" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">DEC</text>
+      <text x="605" y="242" fill="#64748b" font-family="monospace" font-size="10" text-anchor="middle">+5 more ▾</text>
+    </g>
+      <g class="tbl" data-id="fact_depletion" style="cursor:pointer">
+      <rect x="420" y="370" width="250" height="236" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="420" y="370" width="250" height="30" rx="8" fill="rgba(245,158,11,.12)"/>
+      <rect x="420" y="396" width="250" height="4" fill="rgba(245,158,11,.12)"/>
+      <circle cx="434" cy="385" r="4" fill="#f59e0b"/>
+      <text x="444" y="390" fill="#f59e0b" font-family="monospace" font-size="12" font-weight="bold">fact_depletion</text>
+      <text x="430" y="416" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="448" y="416" fill="#f59e0b" font-family="monospace" font-size="10">depletion_id</text>
+      <text x="660" y="416" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="432" y="438" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="448" y="438" fill="#3b82f6" font-family="monospace" font-size="10">→ date_sid</text>
+      <text x="660" y="438" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="432" y="460" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="448" y="460" fill="#3b82f6" font-family="monospace" font-size="10">→ distributor_sid</text>
+      <text x="660" y="460" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="432" y="482" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="448" y="482" fill="#3b82f6" font-family="monospace" font-size="10">→ account_sid</text>
+      <text x="660" y="482" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="432" y="504" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="448" y="504" fill="#3b82f6" font-family="monospace" font-size="10">→ product_sid</text>
+      <text x="660" y="504" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="432" y="526" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="448" y="526" fill="#3b82f6" font-family="monospace" font-size="10">→ sales_rep_sid</text>
+      <text x="660" y="526" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="448" y="548" fill="#e2e8f0" font-family="monospace" font-size="10">sold_qty</text>
+      <text x="660" y="548" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">DEC</text>
+      <text x="448" y="570" fill="#e2e8f0" font-family="monospace" font-size="10">sold_qty_ce</text>
+      <text x="660" y="570" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">DEC</text>
+      <text x="545" y="592" fill="#64748b" font-family="monospace" font-size="10" text-anchor="middle">+6 more ▾</text>
+    </g>
+      <g class="tbl" data-id="dim_date" style="cursor:pointer">
+      <rect x="20" y="340" width="250" height="236" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="20" y="340" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="20" y="366" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="34" cy="355" r="4" fill="#10b981"/>
+      <text x="44" y="360" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_date</text>
+      <text x="30" y="386" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="48" y="386" fill="#f59e0b" font-family="monospace" font-size="10">date_sid</text>
+      <text x="260" y="386" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="48" y="408" fill="#e2e8f0" font-family="monospace" font-size="10">cal_date</text>
+      <text x="260" y="408" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">DATE</text>
+      <text x="48" y="430" fill="#e2e8f0" font-family="monospace" font-size="10">month_nbr</text>
+      <text x="260" y="430" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="48" y="452" fill="#e2e8f0" font-family="monospace" font-size="10">month_name</text>
+      <text x="260" y="452" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="474" fill="#e2e8f0" font-family="monospace" font-size="10">quarter_nbr</text>
+      <text x="260" y="474" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="48" y="496" fill="#e2e8f0" font-family="monospace" font-size="10">year_nbr</text>
+      <text x="260" y="496" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="48" y="518" fill="#e2e8f0" font-family="monospace" font-size="10">year_month_int</text>
+      <text x="260" y="518" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="48" y="540" fill="#e2e8f0" font-family="monospace" font-size="10">week_end_date</text>
+      <text x="260" y="540" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">DATE</text>
+      <text x="145" y="562" fill="#64748b" font-family="monospace" font-size="10" text-anchor="middle">+2 more ▾</text>
+    </g>
+      <g class="tbl" data-id="dim_distributor" style="cursor:pointer">
+      <rect x="20" y="640" width="250" height="214" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="20" y="640" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="20" y="666" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="34" cy="655" r="4" fill="#10b981"/>
+      <text x="44" y="660" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_distributor</text>
+      <text x="30" y="686" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="48" y="686" fill="#f59e0b" font-family="monospace" font-size="10">distributor_sid</text>
+      <text x="260" y="686" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="48" y="708" fill="#e2e8f0" font-family="monospace" font-size="10">distributor_id</text>
+      <text x="260" y="708" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="730" fill="#e2e8f0" font-family="monospace" font-size="10">distributor_name</text>
+      <text x="260" y="730" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="752" fill="#e2e8f0" font-family="monospace" font-size="10">states_covered</text>
+      <text x="260" y="752" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="774" fill="#e2e8f0" font-family="monospace" font-size="10">report_unit</text>
+      <text x="260" y="774" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="796" fill="#e2e8f0" font-family="monospace" font-size="10">report_format</text>
+      <text x="260" y="796" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="818" fill="#e2e8f0" font-family="monospace" font-size="10">importer_name</text>
+      <text x="260" y="818" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="48" y="840" fill="#e2e8f0" font-family="monospace" font-size="10">is_current</text>
+      <text x="260" y="840" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">BOOL</text>
+    </g>
+      <g class="tbl" data-id="dim_account" style="cursor:pointer">
+      <rect x="820" y="210" width="250" height="236" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="820" y="210" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="820" y="236" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="834" cy="225" r="4" fill="#10b981"/>
+      <text x="844" y="230" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_account</text>
+      <text x="830" y="256" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="848" y="256" fill="#f59e0b" font-family="monospace" font-size="10">account_sid</text>
+      <text x="1060" y="256" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="848" y="278" fill="#e2e8f0" font-family="monospace" font-size="10">account_id</text>
+      <text x="1060" y="278" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="300" fill="#e2e8f0" font-family="monospace" font-size="10">account_name</text>
+      <text x="1060" y="300" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="832" y="322" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="848" y="322" fill="#3b82f6" font-family="monospace" font-size="10">→ premise_type_sid</text>
+      <text x="1060" y="322" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="832" y="344" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="848" y="344" fill="#3b82f6" font-family="monospace" font-size="10">→ channel_format_sid</text>
+      <text x="1060" y="344" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="832" y="366" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="848" y="366" fill="#3b82f6" font-family="monospace" font-size="10">→ account_status_sid</text>
+      <text x="1060" y="366" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="832" y="388" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="848" y="388" fill="#3b82f6" font-family="monospace" font-size="10">→ distributor_sid</text>
+      <text x="1060" y="388" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="848" y="410" fill="#e2e8f0" font-family="monospace" font-size="10">chain_name</text>
+      <text x="1060" y="410" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="945" y="432" fill="#64748b" font-family="monospace" font-size="10" text-anchor="middle">+12 more ▾</text>
+    </g>
+      <g class="tbl" data-id="dim_sales_rep" style="cursor:pointer">
+      <rect x="280" y="640" width="250" height="148" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="280" y="640" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="280" y="666" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="294" cy="655" r="4" fill="#10b981"/>
+      <text x="304" y="660" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_sales_rep</text>
+      <text x="290" y="686" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="308" y="686" fill="#f59e0b" font-family="monospace" font-size="10">sales_rep_sid</text>
+      <text x="520" y="686" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="308" y="708" fill="#e2e8f0" font-family="monospace" font-size="10">rep_code</text>
+      <text x="520" y="708" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="308" y="730" fill="#e2e8f0" font-family="monospace" font-size="10">rep_full_name</text>
+      <text x="520" y="730" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="292" y="752" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="308" y="752" fill="#3b82f6" font-family="monospace" font-size="10">→ distributor_sid</text>
+      <text x="520" y="752" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="308" y="774" fill="#e2e8f0" font-family="monospace" font-size="10">is_active</text>
+      <text x="520" y="774" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">BOOL</text>
+    </g>
+      <g class="tbl" data-id="dim_geography" style="cursor:pointer">
+      <rect x="820" y="570" width="250" height="214" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="820" y="570" width="250" height="30" rx="8" fill="rgba(16,185,129,.12)"/>
+      <rect x="820" y="596" width="250" height="4" fill="rgba(16,185,129,.12)"/>
+      <circle cx="834" cy="585" r="4" fill="#10b981"/>
+      <text x="844" y="590" fill="#10b981" font-family="monospace" font-size="12" font-weight="bold">dim_geography</text>
+      <text x="830" y="616" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="848" y="616" fill="#f59e0b" font-family="monospace" font-size="10">geography_sid</text>
+      <text x="1060" y="616" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">SERIAL</text>
+      <text x="848" y="638" fill="#e2e8f0" font-family="monospace" font-size="10">state_code</text>
+      <text x="1060" y="638" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="660" fill="#e2e8f0" font-family="monospace" font-size="10">state_name</text>
+      <text x="1060" y="660" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="682" fill="#e2e8f0" font-family="monospace" font-size="10">county_name</text>
+      <text x="1060" y="682" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="704" fill="#e2e8f0" font-family="monospace" font-size="10">county_fips</text>
+      <text x="1060" y="704" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="726" fill="#e2e8f0" font-family="monospace" font-size="10">msa_code</text>
+      <text x="1060" y="726" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="748" fill="#e2e8f0" font-family="monospace" font-size="10">dma_code</text>
+      <text x="1060" y="748" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="848" y="770" fill="#e2e8f0" font-family="monospace" font-size="10">control_state</text>
+      <text x="1060" y="770" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">BOOL</text>
+    </g>
+      <g class="tbl" data-id="dim_premise_type" style="cursor:pointer">
+      <rect x="1180" y="130" width="220" height="104" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="1180" y="130" width="220" height="30" rx="8" fill="rgba(139,92,246,.12)"/>
+      <rect x="1180" y="156" width="220" height="4" fill="rgba(139,92,246,.12)"/>
+      <circle cx="1194" cy="145" r="4" fill="#8b5cf6"/>
+      <text x="1204" y="150" fill="#8b5cf6" font-family="monospace" font-size="12" font-weight="bold">dim_premise_type</text>
+      <text x="1190" y="176" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="1208" y="176" fill="#f59e0b" font-family="monospace" font-size="10">premise_type_sid</text>
+      <text x="1390" y="176" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="1208" y="198" fill="#e2e8f0" font-family="monospace" font-size="10">premise_type_code</text>
+      <text x="1390" y="198" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="1208" y="220" fill="#e2e8f0" font-family="monospace" font-size="10">premise_type_name</text>
+      <text x="1390" y="220" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+    </g>
+      <g class="tbl" data-id="dim_channel_format" style="cursor:pointer">
+      <rect x="1180" y="320" width="220" height="104" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="1180" y="320" width="220" height="30" rx="8" fill="rgba(139,92,246,.12)"/>
+      <rect x="1180" y="346" width="220" height="4" fill="rgba(139,92,246,.12)"/>
+      <circle cx="1194" cy="335" r="4" fill="#8b5cf6"/>
+      <text x="1204" y="340" fill="#8b5cf6" font-family="monospace" font-size="12" font-weight="bold">dim_channel_format</text>
+      <text x="1190" y="366" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="1208" y="366" fill="#f59e0b" font-family="monospace" font-size="10">channel_format_sid</text>
+      <text x="1390" y="366" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="1208" y="388" fill="#e2e8f0" font-family="monospace" font-size="10">channel_name</text>
+      <text x="1390" y="388" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="1192" y="410" fill="#3b82f6" font-family="monospace" font-size="10">→</text>
+      <text x="1208" y="410" fill="#3b82f6" font-family="monospace" font-size="10">→ premise_type_sid</text>
+      <text x="1390" y="410" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+    </g>
+      <g class="tbl" data-id="dim_account_status" style="cursor:pointer">
+      <rect x="1180" y="500" width="220" height="104" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="1180" y="500" width="220" height="30" rx="8" fill="rgba(139,92,246,.12)"/>
+      <rect x="1180" y="526" width="220" height="4" fill="rgba(139,92,246,.12)"/>
+      <circle cx="1194" cy="515" r="4" fill="#8b5cf6"/>
+      <text x="1204" y="520" fill="#8b5cf6" font-family="monospace" font-size="12" font-weight="bold">dim_account_status</text>
+      <text x="1190" y="546" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="1208" y="546" fill="#f59e0b" font-family="monospace" font-size="10">account_status_sid</text>
+      <text x="1390" y="546" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="1208" y="568" fill="#e2e8f0" font-family="monospace" font-size="10">status_code</text>
+      <text x="1390" y="568" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="1208" y="590" fill="#e2e8f0" font-family="monospace" font-size="10">status_name</text>
+      <text x="1390" y="590" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+    </g>
+      <g class="tbl" data-id="dim_product_format" style="cursor:pointer">
+      <rect x="480" y="800" width="220" height="148" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1.5"/>
+      <rect x="480" y="800" width="220" height="30" rx="8" fill="rgba(139,92,246,.12)"/>
+      <rect x="480" y="826" width="220" height="4" fill="rgba(139,92,246,.12)"/>
+      <circle cx="494" cy="815" r="4" fill="#8b5cf6"/>
+      <text x="504" y="820" fill="#8b5cf6" font-family="monospace" font-size="12" font-weight="bold">dim_product_format</text>
+      <text x="490" y="846" fill="#f59e0b" font-family="monospace" font-size="10">🔑</text>
+      <text x="508" y="846" fill="#f59e0b" font-family="monospace" font-size="10">product_format_sid</text>
+      <text x="690" y="846" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">INT</text>
+      <text x="508" y="868" fill="#e2e8f0" font-family="monospace" font-size="10">format_code</text>
+      <text x="690" y="868" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="890" fill="#e2e8f0" font-family="monospace" font-size="10">format_name</text>
+      <text x="690" y="890" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="912" fill="#e2e8f0" font-family="monospace" font-size="10">container_type</text>
+      <text x="690" y="912" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">VARCHAR</text>
+      <text x="508" y="934" fill="#e2e8f0" font-family="monospace" font-size="10">is_draft</text>
+      <text x="690" y="934" fill="#64748b" font-family="monospace" font-size="9" text-anchor="end">BOOL</text>
+    </g>
+      
+      <!-- Legend -->
+      <rect x="20" y="968" width="12" height="12" rx="2" fill="rgba(245,158,11,.15)" stroke="#f59e0b" stroke-width="1"/>
+      <text x="38" y="978" fill="#64748b" font-family="monospace" font-size="9">Fact</text>
+      <rect x="80" y="968" width="12" height="12" rx="2" fill="rgba(16,185,129,.15)" stroke="#10b981" stroke-width="1"/>
+      <text x="98" y="978" fill="#64748b" font-family="monospace" font-size="9">Dimension</text>
+      <rect x="175" y="968" width="12" height="12" rx="2" fill="rgba(139,92,246,.15)" stroke="#8b5cf6" stroke-width="1"/>
+      <text x="193" y="978" fill="#64748b" font-family="monospace" font-size="9">Reference</text>
+      <line x1="268" y1="974" x2="310" y2="974" stroke="#4b6a8a" stroke-width="1.5" stroke-dasharray="6,4" opacity=".65"/>
+      <text x="316" y="978" fill="#64748b" font-family="monospace" font-size="9">FK Relationship</text>
+    </svg>
+  </div>
+</div>
+
+<div class="sec" id="sec-vip">
+  <div class="st">VIP USCOM ↔ BevGenie Mapping</div>
+  <div class="sd">How each VIP enterprise table maps to our Sera Luce model. VIP has 70+ tables — we distill the essential patterns.</div>
+  <div id="vip-ct"></div>
+</div>
+
+<div class="sec" id="sec-sources">
+  <div class="st">Source File → Target Mapping</div>
+  <div class="sd">How each distributor's raw columns feed into the normalized schema.</div>
+  <div class="fg" id="src-grid"></div>
+</div>
+
+<div class="sec" id="sec-ce">
+  <div class="st">Case Equivalent (CE) Conversion</div>
+  <div class="sd">Inspired by VIP's DIM_PRODUCT_ITEM.CE_RATIO — conversion stored at the product level, applied per transaction.</div>
+  <div id="ce-ct"></div>
+</div>
+
+<div class="sec" id="sec-hierarchy">
+  <div class="st">Product & Distributor Hierarchies</div>
+  <div class="sd">VIP uses 7-level product and 4-level distributor hierarchies. We right-size for Sera Luce while keeping extensibility.</div>
+  <div id="hier-ct"></div>
+</div>
+
+<div class="sec" id="sec-pipeline">
+  <div class="st">ETL Pipeline Design</div>
+  <div class="sd">5-stage pipeline modeled after VIP's data warehouse loading patterns.</div>
+  <div id="pipe-ct"></div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="dp" id="dp">
+  <button class="dc" onclick="closeD()">✕</button>
+  <div id="dpc"></div>
+</div>
+<script>
+// ============ TABLE DEFINITIONS ============
+const T={
+fact_depletion:{type:'fact',label:'fact_depletion',vip:'FACT_SALE_TRANSACTION',x:450,y:380,
+desc:'Core transaction-level depletion fact table. Each row = one sale event from a distributor file.',
+cols:[
+{n:'depletion_id',t:'SERIAL',k:'PK',v:'—',s:['Generated'],x:'Auto-increment',d:'Primary key'},
+{n:'date_sid',t:'INT',k:'FK→dim_date',v:'SALE_DATE_SID',s:['CWG:Date','A&V:Order Date','VS:YearMoInt','PAL:Date'],x:'Parse date → lookup',d:'Date dim FK'},
+{n:'distributor_sid',t:'INT',k:'FK→dim_distributor',v:'DIST_SID',s:['File identity'],x:'Map source → dist',d:'Distributor dim FK'},
+{n:'account_sid',t:'INT',k:'FK→dim_account',v:'RETL_ACCT_SID',s:['CWG:Account','A&V:Cust Name','VS:Cust Name','PAL:Cust Name'],x:'Entity resolution',d:'Account dim FK'},
+{n:'product_sid',t:'INT',k:'FK→dim_product',v:'PROD_ITEM_SID',s:['CWG:Code','A&V:Item','VS:Prod Code','PAL:Price Pt'],x:'Code mapping table',d:'Product dim FK'},
+{n:'sales_rep_sid',t:'INT',k:'FK→dim_sales_rep',v:'PRIM_SALES_REP_ID',s:['CWG:Sales Rep','A&V:Rep','VS:sales rep','PAL:Employee'],x:'Name normalize',d:'Sales rep FK'},
+{n:'sold_qty',t:'DEC(18,6)',k:'',v:'SOLD_QTY',s:['CWG:Quantity','A&V:QTY Ordered','VS:Qty Sold BaseUM','PAL:Qty'],x:'Raw as-reported',d:'Qty in source units'},
+{n:'sold_qty_ce',t:'DEC(18,6)',k:'',v:'SOLD_QTY×CE_RATIO',s:['Calculated'],x:'sold_qty × product.ce_ratio',d:'Case equivalents'},
+{n:'gross_price',t:'DEC(20,6)',k:'',v:'FRLN_PRICE',s:['VS:Dollars Sold','PAL:Gross Sales'],x:'NULL if unavailable',d:'Gross price'},
+{n:'net_price',t:'DEC(20,6)',k:'',v:'NET_PRICE',s:['PAL:Net Sales','VS:Dollars Sold'],x:'Gross - discounts',d:'Net price'},
+{n:'discount_amt',t:'DEC(20,6)',k:'',v:'—',s:['PAL:Discounts','A&V:Vol Discount'],x:'NULL if unavailable',d:'Discount amount'},
+{n:'invoice_nbr',t:'VARCHAR(50)',k:'',v:'INV_NBR',s:['CWG:Invoice #','PAL:Transaction ID'],x:'As-is',d:'Invoice reference'},
+{n:'source_system',t:'VARCHAR(30)',k:'',v:'—',s:['Derived'],x:'curated/artisans/vintage/pal',d:'Source tag'},
+{n:'load_date',t:'TIMESTAMP',k:'',v:'LOAD_DATE_TIME',s:['Generated'],x:'CURRENT_TIMESTAMP',d:'Load timestamp'}
+]},
+
+dim_date:{type:'dim',label:'dim_date',vip:'DIM_TIME',x:50,y:250,
+desc:'Standard date dimension. Supports R3/R6/R12 rolling metrics and fiscal period analysis.',
+cols:[
+{n:'date_sid',t:'INT',k:'PK',v:'TIME_SID',s:['Generated'],x:'YYYYMMDD',d:'Surrogate key'},
+{n:'cal_date',t:'DATE',k:'',v:'CAL_DATE',s:['Generated'],x:'Full date',d:'Calendar date'},
+{n:'month_nbr',t:'INT',k:'',v:'MTH_NBR',s:['Generated'],x:'MONTH()',d:'Month 1-12'},
+{n:'month_name',t:'VARCHAR(15)',k:'',v:'MTH_NAME',s:['Generated'],x:'MONTHNAME()',d:'Month name'},
+{n:'quarter_nbr',t:'INT',k:'',v:'QTR_NBR',s:['Generated'],x:'QUARTER()',d:'Quarter'},
+{n:'year_nbr',t:'INT',k:'',v:'YR_NBR',s:['Generated'],x:'YEAR()',d:'Year'},
+{n:'year_month_int',t:'INT',k:'',v:'TIME_KEY_NBR',s:['Generated'],x:'YYYYMM',d:'Matches VS format'},
+{n:'week_end_date',t:'DATE',k:'',v:'US_WK_END_DATE',s:['Generated'],x:'Saturday',d:'Week end'},
+{n:'fiscal_year',t:'INT',k:'',v:'FIS_YR_NBR',s:['Generated'],x:'Configurable',d:'Fiscal year'},
+{n:'is_weekend',t:'BOOL',k:'',v:'WKND_IND',s:['Generated'],x:'SAT/SUN',d:'Weekend flag'}
+]},
+
+dim_distributor:{type:'dim',label:'dim_distributor',vip:'DIM_DISTRIBUTOR',x:50,y:550,
+desc:'Distributor dimension. VIP has 4 levels (Corp→Master→Dist→Location); we flatten for 6 distributors.',
+cols:[
+{n:'distributor_sid',t:'SERIAL',k:'PK',v:'DIST_SID',s:['Generated'],x:'Auto-increment',d:'Surrogate key'},
+{n:'distributor_id',t:'VARCHAR(30)',k:'',v:'DIST_ID',s:['CWG,AV,VS,PAL,ORS,BAN'],x:'Short code',d:'Business key'},
+{n:'distributor_name',t:'VARCHAR(255)',k:'',v:'DIST_NAME',s:['Report Details doc'],x:'Full name',d:'Full name'},
+{n:'importer_name',t:'VARCHAR(255)',k:'',v:'—',s:['Brand-level info'],x:'Sette Sei / Am Spirits Exchange',d:'Importer (not a distributor)'},
+{n:'states_covered',t:'VARCHAR(50)',k:'',v:'via PROV_STATE_SID',s:['Report Details'],x:'SC / DC,MD,VA / etc',d:'States'},
+{n:'report_unit',t:'VARCHAR(30)',k:'',v:'—',s:['Report Details'],x:'cartons/cases/mixed',d:'Report unit type'},
+{n:'report_format',t:'VARCHAR(50)',k:'',v:'—',s:['Manual'],x:'Platform name',d:'Source system'},
+{n:'is_current',t:'BOOL',k:'',v:'CRNT_IND',s:['Manual'],x:'SCD2 flag',d:'Current record'}
+]},
+
+dim_account:{type:'dim',label:'dim_account',vip:'DIM_RETAIL_ACCOUNT',x:900,y:250,
+desc:'THE richest dimension — stores, bars, restaurants buying Sera Luce. VIP has 50+ fields; critical for lookalike matching with Census/license data.',
+cols:[
+{n:'account_sid',t:'SERIAL',k:'PK',v:'RETL_ACCT_SID',s:['Generated'],x:'Auto-increment',d:'Surrogate key'},
+{n:'account_id',t:'VARCHAR(50)',k:'',v:'ACCT_ID',s:['CWG:Account ID','VS:Customer Key'],x:'Source ID',d:'Source identifier'},
+{n:'account_name',t:'VARCHAR(255)',k:'',v:'RETL_DOING_BIZ_AS_NAME',s:['CWG:Account','A&V:Cust Name','VS:Cust Name','PAL:Cust Name'],x:'Entity resolution!',d:'DBA name'},
+{n:'premise_type_sid',t:'INT',k:'FK→dim_premise_type',v:'PREM_TYPE_SID',s:['CWG:Acct Type','A&V:On/Off','VS:Cust Div','PAL:Location'],x:'ON/OFF normalize',d:'Premise type'},
+{n:'channel_format_sid',t:'INT',k:'FK→dim_channel_format',v:'CHNL_FORMAT_SID',s:['VS:Cust Type Class'],x:'Fine Wine Store etc',d:'Channel detail'},
+{n:'account_status_sid',t:'INT',k:'FK→dim_account_status',v:'RETL_ACCT_STAT_SID',s:['Derived'],x:'Active if recent',d:'Status'},
+{n:'distributor_sid',t:'INT',k:'FK→dim_distributor',v:'DIST_SID',s:['From source'],x:'Servicing dist',d:'Distributor link'},
+{n:'chain_name',t:'VARCHAR(255)',k:'',v:'CHAIN_DESC',s:['VS:Cust Group ID'],x:'PAChainFoods etc',d:'Chain affiliation'},
+{n:'addr_line_1',t:'VARCHAR(300)',k:'',v:'ACCT_ADDR_LINE_1_TEXT',s:['CWG:Ship Street','VS:Address 1'],x:'Street address',d:'Address'},
+{n:'city',t:'VARCHAR(100)',k:'',v:'ACCT_CITY_TEXT',s:['CWG:Ship City','VS:City'],x:'',d:'City'},
+{n:'state_code',t:'VARCHAR(2)',k:'',v:'via DIM_PROVINCE_STATE',s:['CWG:Ship State','A&V:State','VS:State'],x:'',d:'State'},
+{n:'zip_code',t:'VARCHAR(10)',k:'',v:'PSTL_ZIP9_CODE',s:['CWG:Ship Zip','VS:Postal Code'],x:'5 or 9 digit',d:'ZIP → Census'},
+{n:'latitude',t:'DEC(10,6)',k:'',v:'ACCT_LAT',s:['Geocoding'],x:'From address',d:'Latitude'},
+{n:'longitude',t:'DEC(10,6)',k:'',v:'ACCT_LONG',s:['Geocoding'],x:'From address',d:'Longitude'},
+{n:'fips_code',t:'VARCHAR(10)',k:'',v:'ACCT_FIPS_CODE',s:['Census'],x:'From ZIP',d:'Census FIPS'},
+{n:'msa_code',t:'VARCHAR(10)',k:'',v:'ACCT_MSA_CODE',s:['Census'],x:'Metro area',d:'MSA code'},
+{n:'license_nbr',t:'VARCHAR(30)',k:'',v:'—',s:['VS:License #'],x:'Liquor license',d:'License number'},
+{n:'first_purchase_date',t:'DATE',k:'',v:'OPEN_DATE',s:['Hist:first_pur_date'],x:'Earliest known',d:'First purchase'},
+{n:'last_purchase_date',t:'DATE',k:'',v:'—',s:['Hist:last_pur_date'],x:'Most recent',d:'Last purchase'},
+{n:'is_current',t:'BOOL',k:'',v:'CRNT_IND',s:['Derived'],x:'SCD2',d:'Current record'}
+]},
+
+dim_product:{type:'dim',label:'dim_product',vip:'DIM_PRODUCT_ITEM (hierarchy flattened)',x:520,y:30,
+desc:'Product dimension with CE_RATIO built in (VIP pattern). Flattens VIP\'s 7-level hierarchy to essentials for 2 products + variants.',
+cols:[
+{n:'product_sid',t:'SERIAL',k:'PK',v:'PROD_ITEM_SID',s:['Generated'],x:'Auto-increment',d:'Surrogate key'},
+{n:'product_code',t:'VARCHAR(30)',k:'',v:'SKU_CODE',s:['CWG:Code','A&V:Item','VS:Prod Code','PAL:parsed'],x:'Canonical code',d:'Product code'},
+{n:'product_name',t:'VARCHAR(255)',k:'',v:'PROD_ITEM_NAME',s:['CWG:Wine','VS:Prod Desc','PAL:Item'],x:'Standardized',d:'Full name'},
+{n:'brand',t:'VARCHAR(100)',k:'',v:'PROD_BRD_NAME',s:['VS:Brand'],x:'Sera Luce/ArtSpritz',d:'Brand'},
+{n:'sub_brand',t:'VARCHAR(100)',k:'',v:'PROD_SUB_BRD_NAME',s:['VS:Proprietary Name'],x:'Venetian Spritz',d:'Sub-brand'},
+{n:'product_class',t:'VARCHAR(30)',k:'',v:'via PROD_CATEGORY',s:['VS:Prod Class'],x:'RTD',d:'Product class'},
+{n:'product_format_sid',t:'INT',k:'FK→dim_product_format',v:'CNTN_TYPE_SID',s:['Derived'],x:'Can vs Keg',d:'Format link'},
+{n:'unit_size_ml',t:'DEC(10,2)',k:'',v:'PROD_ITEM_VOL',s:['VS:Unit Size'],x:'250 or 20000',d:'Volume mL'},
+{n:'packs_per_case',t:'INT',k:'',v:'UNIT_PER_CS_NBR',s:['VS:Units/Case'],x:'6 for cans',d:'Packs per case'},
+{n:'ce_ratio',t:'DEC(18,6)',k:'',v:'CE_RATIO ★',s:['Calculated'],x:'1/24, 1/6, or 1.0',d:'CRITICAL: Case equiv'},
+{n:'abv_pct',t:'DEC(5,2)',k:'',v:'PROD_ITEM_ALCO_RATE',s:['VS:ABV%'],x:'9.0',d:'ABV %'},
+{n:'upc_scan',t:'VARCHAR(30)',k:'',v:'SCAN_UPC',s:['VS:UPC/EAN'],x:'860001349016',d:'UPC'},
+{n:'is_active',t:'BOOL',k:'',v:'via DIM_SKU_STATUS',s:['VS:Has Activity?'],x:'Active flag',d:'Active product'}
+]},
+
+dim_geography:{type:'dim',label:'dim_geography',vip:'DIM_PROVINCE_STATE+COUNTY+CITY',x:900,y:650,
+desc:'Flattened geography. Links to Census, DMA codes, control state indicators for lookalike analysis.',
+cols:[
+{n:'geography_sid',t:'SERIAL',k:'PK',v:'PROV_STATE_SID+',s:['Generated'],x:'Surrogate',d:'PK'},
+{n:'state_code',t:'VARCHAR(2)',k:'',v:'PROV_STATE_CODE',s:['All files'],x:'2-letter',d:'State'},
+{n:'state_name',t:'VARCHAR(50)',k:'',v:'PROV_STATE_NAME',s:['Lookup'],x:'Full name',d:'State name'},
+{n:'county_name',t:'VARCHAR(100)',k:'',v:'COTY_NAME',s:['Census'],x:'From FIPS',d:'County'},
+{n:'county_fips',t:'VARCHAR(5)',k:'',v:'COTY_FIPS_CODE',s:['Census'],x:'5-digit',d:'FIPS'},
+{n:'msa_code',t:'VARCHAR(10)',k:'',v:'ACCT_MSA_CODE',s:['Census'],x:'Metro area',d:'MSA'},
+{n:'dma_code',t:'VARCHAR(10)',k:'',v:'—',s:['DMA map'],x:'Media market',d:'DMA'},
+{n:'control_state',t:'BOOL',k:'',v:'STATE_IND',s:['Lookup'],x:'PA=TRUE',d:'Control state'}
+]},
+
+dim_sales_rep:{type:'dim',label:'dim_sales_rep',vip:'DIM_DIST_REPRESENTATIVE',x:450,y:700,
+desc:'Sales rep dim. Consolidates 3 VIP tables into one.',
+cols:[
+{n:'sales_rep_sid',t:'SERIAL',k:'PK',v:'DIST_REP_SID',s:['Generated'],x:'Surrogate',d:'PK'},
+{n:'rep_code',t:'VARCHAR(30)',k:'',v:'DIST_REP_CODE',s:['A&V:Rep','Hist:sales_rep'],x:'Short code',d:'Rep code'},
+{n:'rep_full_name',t:'VARCHAR(255)',k:'',v:'REP_FULL_NAME',s:['CWG:Sales Rep','VS:rep','PAL:Employee'],x:'Normalized',d:'Full name'},
+{n:'distributor_sid',t:'INT',k:'FK→dim_distributor',v:'DIST_SID',s:['Derived'],x:'Which dist',d:'Dist link'},
+{n:'is_active',t:'BOOL',k:'',v:'—',s:['Derived'],x:'Active flag',d:'Active'}
+]},
+
+dim_premise_type:{type:'ref',label:'dim_premise_type',vip:'DIM_PREMISE_TYPE',x:1250,y:100,
+desc:'On/Off premise lookup.',
+cols:[
+{n:'premise_type_sid',t:'INT',k:'PK',v:'PREM_TYPE_SID',s:['Seed'],x:'',d:'PK'},
+{n:'premise_type_code',t:'VARCHAR(10)',k:'',v:'PREM_TYPE_CODE',s:['Seed'],x:'ON/OFF',d:'Code'},
+{n:'premise_type_name',t:'VARCHAR(30)',k:'',v:'PREM_TYPE_NAME',s:['Seed'],x:'Full name',d:'Name'}
+]},
+
+dim_channel_format:{type:'ref',label:'dim_channel_format',vip:'DIM_CHANNEL_FORMAT+CLASS_OF_TRADE',x:1250,y:300,
+desc:'Detailed channel classification. Combines two VIP tables.',
+cols:[
+{n:'channel_format_sid',t:'INT',k:'PK',v:'CHNL_FORMAT_SID',s:['Seed'],x:'',d:'PK'},
+{n:'channel_name',t:'VARCHAR(100)',k:'',v:'CHNL_FORMAT_NAME',s:['VS:Cust Type Class'],x:'Fine Wine Store etc',d:'Name'},
+{n:'premise_type_sid',t:'INT',k:'FK→dim_premise_type',v:'PREM_TYPE_SID',s:['Derived'],x:'Parent premise',d:'Premise link'}
+]},
+
+dim_product_format:{type:'ref',label:'dim_product_format',vip:'DIM_CONTAINER_TYPE',x:450,y:950,
+desc:'Container/packaging format.',
+cols:[
+{n:'product_format_sid',t:'INT',k:'PK',v:'CNTN_TYPE_SID',s:['Seed'],x:'',d:'PK'},
+{n:'format_code',t:'VARCHAR(20)',k:'',v:'CNTN_TYPE_ABBR',s:['Seed'],x:'CAN_250ML etc',d:'Code'},
+{n:'format_name',t:'VARCHAR(50)',k:'',v:'CNTN_TYPE_NAME',s:['Seed'],x:'250mL Can',d:'Name'},
+{n:'container_type',t:'VARCHAR(20)',k:'',v:'CNTN_TYPE_NAME',s:['VS:Pkg Format'],x:'Can/Keg',d:'Category'},
+{n:'is_draft',t:'BOOL',k:'',v:'—',s:['Derived'],x:'TRUE for kegs',d:'Draft flag'}
+]},
+
+dim_account_status:{type:'ref',label:'dim_account_status',vip:'DIM_RETAIL_ACCT_STATUS',x:1250,y:500,
+desc:'Account status lookup.',
+cols:[
+{n:'account_status_sid',t:'INT',k:'PK',v:'RETL_ACCT_STAT_SID',s:['Seed'],x:'',d:'PK'},
+{n:'status_code',t:'VARCHAR(20)',k:'',v:'RETL_ACCT_STAT_CODE',s:['Seed'],x:'ACTIVE',d:'Code'},
+{n:'status_name',t:'VARCHAR(50)',k:'',v:'RETL_ACCT_STAT_NAME',s:['Seed'],x:'Active',d:'Name'}
+]}
+};
+
+const rels=[
+{f:'fact_depletion',t:'dim_date',fp:'left',tp:'right'},
+{f:'fact_depletion',t:'dim_distributor',fp:'left',tp:'right'},
+{f:'fact_depletion',t:'dim_account',fp:'right',tp:'left'},
+{f:'fact_depletion',t:'dim_product',fp:'top',tp:'bottom'},
+{f:'fact_depletion',t:'dim_sales_rep',fp:'bottom',tp:'top'},
+{f:'dim_account',t:'dim_premise_type',fp:'right',tp:'left'},
+{f:'dim_account',t:'dim_channel_format',fp:'right',tp:'left'},
+{f:'dim_account',t:'dim_account_status',fp:'right',tp:'left'},
+{f:'dim_account',t:'dim_distributor',fp:'left',tp:'right'},
+{f:'dim_account',t:'dim_geography',fp:'bottom',tp:'top'},
+{f:'dim_product',t:'dim_product_format',fp:'bottom',tp:'top'},
+{f:'dim_sales_rep',t:'dim_distributor',fp:'left',tp:'bottom'}
+];
+
+// ============ NAV ============
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+    document.getElementById('sec-'+b.dataset.tab).classList.add('active');
+    // SVG ER - no re-render needed
+  };
+});
+
+// ============ RENDER ER ============
+let sc=.82;
+// renderER removed — using pure SVG ER diagram
+function zoom(d){sc=Math.max(.4,Math.min(1.5,sc+d));// SVG ER - no renderER needed
+
+function showBizDetail(id) {
+  const details = {
+    product_can: {title:'250mL Cans (Venetian Spritz)',desc:'Sera Luce\'s core product. 250mL aluminum cans sold primarily as 4-packs. Six 4-packs make a case (6 liters total, 24 cans). Different distributors report in different units — cartons (CWG), cases (A&V), base UM/4-packs (VS), or individual cans (PAL retail). The CE_RATIO on dim_product normalizes everything to cases.',model:'dim_product rows: SL-CAN-250 (single, ce=0.0417), SL-4PK (four-pack, ce=0.1667), SL-CASE (case of 6×4pk, ce=1.0)'},
+    product_keg: {title:'20L Kegs (1/6 BBL)',desc:'For on-premise (bars, restaurants). 20-liter kegs, sometimes called 1/6 barrel. Tracked separately from cans because the economics are completely different — different price point, different accounts, different sales cycle. We do NOT convert kegs to case equivalents.',model:'dim_product rows: SL-KEG-20L (sparkling), SL-KEG-FLAT (still/flat). ce_ratio = NULL. Tracked as separate keg_qty.'},
+    importer: {title:'Sette Sei / American Spirits Exchange (Importer)',desc:'This is NOT a distributor — it\'s the importer. Sette Sei handles bringing Sera Luce into the US market, manages the TTB COLA federal approvals, and then routes the product to actual distributors (CWG, A&V, Vintage, PAL). In the three-tier system, the importer sits between the producer and the distributors. Some of the distributor reports reference Sette Sei as "Supplier" or "Importer" — that\'s correct, but they don\'t distribute to retail accounts.',model:'Lives on dim_product.importer_name = "Sette Sei / American Spirits Exchange". NOT in dim_distributor.'},
+    dist_cwg: {title:'Curated Wine Group (South Carolina)',desc:'Covers South Carolina. Reports depletions in CARTONS (which are actually 4-packs, not cases!). 15 cartons = 2.5 cases. Also reports kegs separately. Has full shipping addresses for accounts. Uses "Importer" field to reference Sette Sei.',model:'dim_distributor: id=CWG, states=SC, report_unit=cartons. CE conversion: qty ÷ 6.'},
+    dist_av: {title:'Artisans & Vines (DC, MD, VA)',desc:'Covers DC, Maryland, Virginia. The most challenging source — format changes monthly, column names shift, has 22+ monthly tabs. Customer names include state prefixes (DC-Bar Name, MD-Store Name). Usually reports in cases but sometimes MD accounts show 4-packs instead.',model:'dim_distributor: id=AV, states=DC/MD/VA, report_unit=cases (usually). ⚠️ Format instability.'},
+    dist_vs: {title:'Vintage Imports / Sette Sei (NJ, PA)',desc:'Covers New Jersey, Pennsylvania. BY FAR the richest data source — uses the Apprise system which provides product details (ABV, UPC, package format), customer details (address, license #, chain affiliation, customer type), and proper case conversion rates. Has 7 sheets including product info and customer info.',model:'dim_distributor: id=VS, states=NJ/PA, report_unit=base UM (4-packs). Note: "Dflt Selling UM" column already shows cases.'},
+    dist_pal: {title:'PA Libations (Pennsylvania)',desc:'Covers Pennsylvania. Uses Square POS, which means it mixes retail consumer sales (single cans, 4-packs sold at their tasting room/store) with wholesale B2B sales (cases and kegs to accounts). You have to parse the "Price Point Name" and "Item" fields to figure out which is which — "(Wholesale)" in Item name = B2B.',model:'dim_distributor: id=PAL, states=PA, report_unit=mixed. Must separate retail vs wholesale.'},
+    acct_on: {title:'On-Premise Accounts (Bars, Restaurants)',desc:'Bars, restaurants, hotels, event venues that serve Sera Luce by the drink or by the keg. These are higher-margin accounts but lower volume per account. Justin cares about these for brand building — getting Sera Luce on cocktail menus and as a featured aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "ON". Sources: CWG Account Type="Restaurant", A&V On/Off="On Prem", VS Customer Division="On Premise".'},
+    acct_off: {title:'Off-Premise Accounts (Wine Shops, Liquor Stores)',desc:'Retail stores where consumers buy 4-packs and cases to take home. These are the volume drivers. Fine wine shops are particularly important for Sera Luce\'s positioning as a premium Italian aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "OFF". VS data also gives channel_format (Fine Wine Store, Package Store, etc.)'},
+    acct_retail: {title:'Grocery & Supermarket Chains',desc:'Larger retail chains (Total Wine, Whole Foods, etc.) with multiple locations. These accounts have a chain_name in our data and represent potential for rapid geographic expansion if a chain buyer approves Sera Luce.',model:'dim_account.chain_name populated (from VS Customer Group ID). Higher ACV (all commodity volume) potential.'},
+    acct_detail: {title:'Account Details for Lookalike Matching',desc:'This is THE BevGenie use case: "Find me more accounts like my best performers." To do this, we need rich account data — address (for geocoding), ZIP code (for Census demographic joins via FIPS), license number (for state license databases), premise type, channel format, chain affiliation, and purchase history (first/last purchase dates, rolling totals).',model:'dim_account has 20 fields including addr, city, state, zip, lat/long, fips_code, msa_code, license_nbr, first/last_purchase_date. Joins to dim_geography and Census data.'},
+  };
+  const d = details[id];
+  if(!d) return;
+  const p = document.getElementById('dp'), ct = document.getElementById('dpc');
+  ct.innerHTML = '<h2 style="color:var(--sera)">' + d.title + '</h2><p style="font-size:.82rem;color:var(--tx);margin:1rem 0;line-height:1.7">' + d.desc + '</p><div style="background:rgba(16,185,129,.06);border:1px solid var(--dimbd);border-radius:8px;padding:.8rem;margin-top:1rem"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:.7rem;color:var(--dim);font-weight:600;margin-bottom:.3rem">📐 Data Model Mapping</div><div style="font-size:.75rem;color:var(--tx)">' + d.model + '</div></div>';
+  p.classList.add('open');
+}
+}
+function zReset(){sc=.82;// SVG ER - no renderER needed
+
+function showBizDetail(id) {
+  const details = {
+    product_can: {title:'250mL Cans (Venetian Spritz)',desc:'Sera Luce\'s core product. 250mL aluminum cans sold primarily as 4-packs. Six 4-packs make a case (6 liters total, 24 cans). Different distributors report in different units — cartons (CWG), cases (A&V), base UM/4-packs (VS), or individual cans (PAL retail). The CE_RATIO on dim_product normalizes everything to cases.',model:'dim_product rows: SL-CAN-250 (single, ce=0.0417), SL-4PK (four-pack, ce=0.1667), SL-CASE (case of 6×4pk, ce=1.0)'},
+    product_keg: {title:'20L Kegs (1/6 BBL)',desc:'For on-premise (bars, restaurants). 20-liter kegs, sometimes called 1/6 barrel. Tracked separately from cans because the economics are completely different — different price point, different accounts, different sales cycle. We do NOT convert kegs to case equivalents.',model:'dim_product rows: SL-KEG-20L (sparkling), SL-KEG-FLAT (still/flat). ce_ratio = NULL. Tracked as separate keg_qty.'},
+    importer: {title:'Sette Sei / American Spirits Exchange (Importer)',desc:'This is NOT a distributor — it\'s the importer. Sette Sei handles bringing Sera Luce into the US market, manages the TTB COLA federal approvals, and then routes the product to actual distributors (CWG, A&V, Vintage, PAL). In the three-tier system, the importer sits between the producer and the distributors. Some of the distributor reports reference Sette Sei as "Supplier" or "Importer" — that\'s correct, but they don\'t distribute to retail accounts.',model:'Lives on dim_product.importer_name = "Sette Sei / American Spirits Exchange". NOT in dim_distributor.'},
+    dist_cwg: {title:'Curated Wine Group (South Carolina)',desc:'Covers South Carolina. Reports depletions in CARTONS (which are actually 4-packs, not cases!). 15 cartons = 2.5 cases. Also reports kegs separately. Has full shipping addresses for accounts. Uses "Importer" field to reference Sette Sei.',model:'dim_distributor: id=CWG, states=SC, report_unit=cartons. CE conversion: qty ÷ 6.'},
+    dist_av: {title:'Artisans & Vines (DC, MD, VA)',desc:'Covers DC, Maryland, Virginia. The most challenging source — format changes monthly, column names shift, has 22+ monthly tabs. Customer names include state prefixes (DC-Bar Name, MD-Store Name). Usually reports in cases but sometimes MD accounts show 4-packs instead.',model:'dim_distributor: id=AV, states=DC/MD/VA, report_unit=cases (usually). ⚠️ Format instability.'},
+    dist_vs: {title:'Vintage Imports / Sette Sei (NJ, PA)',desc:'Covers New Jersey, Pennsylvania. BY FAR the richest data source — uses the Apprise system which provides product details (ABV, UPC, package format), customer details (address, license #, chain affiliation, customer type), and proper case conversion rates. Has 7 sheets including product info and customer info.',model:'dim_distributor: id=VS, states=NJ/PA, report_unit=base UM (4-packs). Note: "Dflt Selling UM" column already shows cases.'},
+    dist_pal: {title:'PA Libations (Pennsylvania)',desc:'Covers Pennsylvania. Uses Square POS, which means it mixes retail consumer sales (single cans, 4-packs sold at their tasting room/store) with wholesale B2B sales (cases and kegs to accounts). You have to parse the "Price Point Name" and "Item" fields to figure out which is which — "(Wholesale)" in Item name = B2B.',model:'dim_distributor: id=PAL, states=PA, report_unit=mixed. Must separate retail vs wholesale.'},
+    acct_on: {title:'On-Premise Accounts (Bars, Restaurants)',desc:'Bars, restaurants, hotels, event venues that serve Sera Luce by the drink or by the keg. These are higher-margin accounts but lower volume per account. Justin cares about these for brand building — getting Sera Luce on cocktail menus and as a featured aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "ON". Sources: CWG Account Type="Restaurant", A&V On/Off="On Prem", VS Customer Division="On Premise".'},
+    acct_off: {title:'Off-Premise Accounts (Wine Shops, Liquor Stores)',desc:'Retail stores where consumers buy 4-packs and cases to take home. These are the volume drivers. Fine wine shops are particularly important for Sera Luce\'s positioning as a premium Italian aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "OFF". VS data also gives channel_format (Fine Wine Store, Package Store, etc.)'},
+    acct_retail: {title:'Grocery & Supermarket Chains',desc:'Larger retail chains (Total Wine, Whole Foods, etc.) with multiple locations. These accounts have a chain_name in our data and represent potential for rapid geographic expansion if a chain buyer approves Sera Luce.',model:'dim_account.chain_name populated (from VS Customer Group ID). Higher ACV (all commodity volume) potential.'},
+    acct_detail: {title:'Account Details for Lookalike Matching',desc:'This is THE BevGenie use case: "Find me more accounts like my best performers." To do this, we need rich account data — address (for geocoding), ZIP code (for Census demographic joins via FIPS), license number (for state license databases), premise type, channel format, chain affiliation, and purchase history (first/last purchase dates, rolling totals).',model:'dim_account has 20 fields including addr, city, state, zip, lat/long, fips_code, msa_code, license_nbr, first/last_purchase_date. Joins to dim_geography and Census data.'},
+  };
+  const d = details[id];
+  if(!d) return;
+  const p = document.getElementById('dp'), ct = document.getElementById('dpc');
+  ct.innerHTML = '<h2 style="color:var(--sera)">' + d.title + '</h2><p style="font-size:.82rem;color:var(--tx);margin:1rem 0;line-height:1.7">' + d.desc + '</p><div style="background:rgba(16,185,129,.06);border:1px solid var(--dimbd);border-radius:8px;padding:.8rem;margin-top:1rem"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:.7rem;color:var(--dim);font-weight:600;margin-bottom:.3rem">📐 Data Model Mapping</div><div style="font-size:.75rem;color:var(--tx)">' + d.model + '</div></div>';
+  p.classList.add('open');
+}
+}
+
+// ============ DETAIL PANEL ============
+function srcTag(s){
+  const m={'CWG':'cwg','Curated':'cwg','A&V':'av','Artisans':'av','VS':'vs','Vintage':'vs','Sette':'vs','PAL':'pal','Hist':'hist','Historical':'hist'};
+  for(const[k,v]of Object.entries(m))if(s.includes(k))return`<span class="stag ${v}">${s}</span>`;
+  return`<span class="stag" style="background:rgba(255,255,255,.05);color:var(--txd)">${s}</span>`;
+}
+function openD(id){
+  const t=T[id],p=document.getElementById('dp'),ct=document.getElementById('dpc');
+  const clr={fact:'var(--fact)',dim:'var(--dim)',ref:'var(--ref)'}[t.type];
+  ct.innerHTML=`<h2 style="color:${clr}">${t.label}</h2><div class="veq">VIP: ${t.vip}</div><p style="font-size:.78rem;color:var(--txd);margin-bottom:1.3rem">${t.desc}</p><table class="dt"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>VIP Mapping</th><th>Sources</th><th>Transform</th></tr></thead><tbody>${t.cols.map(c=>`<tr><td style="color:${c.k==='PK'?'var(--fact)':c.k.startsWith('FK')?'var(--acc)':'var(--tx)'}${c.k==='PK'?';font-weight:600':''}">${c.k==='PK'?'🔑 ':''}${c.k.startsWith('FK')?'→ ':''}${c.n}</td><td style="color:var(--txd)">${c.t}</td><td style="color:${c.k==='PK'?'var(--fact)':c.k.startsWith('FK')?'var(--acc)':'var(--txd)'}">${c.k||'—'}</td><td style="color:var(--vip);font-size:.64rem">${c.v}</td><td>${c.s.map(srcTag).join('')}</td><td style="font-size:.64rem;color:var(--txd)">${c.x}</td></tr>`).join('')}</tbody></table>`;
+  p.classList.add('open');
+  // Highlight lines
+  document.querySelectorAll('svg.lines path').forEach(p2=>{
+    p2.classList.toggle('active',p2.dataset.f===id||p2.dataset.t===id);
+  });
+  document.querySelectorAll('.et').forEach(e=>{
+    const eid=e.id.replace('er-','');
+    e.classList.toggle('hl',rels.some(r=>(r.f===id&&r.t===eid)||(r.t===id&&r.f===eid))||eid===id);
+  });
+}
+function closeD(){
+  document.getElementById('dp').classList.remove('open');
+  document.querySelectorAll('svg.lines path').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.et').forEach(e=>e.classList.remove('hl'));
+}
+
+// ============ VIP MAPPING SECTION ============
+const vipMaps=[
+{title:'Fact: Sales Transaction',vip:'FACT_SALE_TRANSACTION',our:'fact_depletion',
+desc:'VIP\'s core fact table has 4 FKs + 3 measures. Ours extends to 5 FKs + 5 measures to capture discount/invoice data available from Sera Luce sources.',
+rows:[['DIST_SID','distributor_sid'],['RETL_ACCT_SID','account_sid'],['PROD_ITEM_SID','product_sid'],['SALE_DATE_SID','date_sid'],['SOLD_QTY','sold_qty'],['FRLN_PRICE','gross_price'],['NET_PRICE','net_price'],['INV_NBR','invoice_nbr'],['LOAD_DATE_TIME','load_date'],['—','sold_qty_ce (★ calculated)'],['—','discount_amt'],['—','sales_rep_sid (moved from dim)'],['—','source_system']]},
+{title:'Product Hierarchy (7→4 levels)',vip:'DIM_PRODUCT_ITEM + 6 parent dims',our:'dim_product (flattened)',
+desc:'VIP chains: COMPANY_ENTITY→BUSINESS_SEGMENT→PRODUCT_CATEGORY→PRODUCT_BRAND→PRODUCT_SUB_BRAND→PRODUCT_FLAVOR→PRODUCT_TYPE→PRODUCT_ITEM. We flatten since Sera Luce has 1 brand, 1 sub-brand, 2 formats.',
+rows:[['PROD_ITEM_SID','product_sid'],['SKU_CODE','product_code'],['PROD_ITEM_NAME','product_name'],['PROD_BRD_NAME (via hierarchy)','brand'],['PROD_SUB_BRD_NAME (via hierarchy)','sub_brand'],['PROD_CAT_NAME (via hierarchy)','product_class'],['CNTN_TYPE_SID','product_format_sid (FK)'],['PROD_ITEM_VOL','unit_size_ml'],['PROD_ITEM_UNIT_PER_CS_NBR','packs_per_case'],['CE_RATIO ★','ce_ratio ★'],['PROD_ITEM_ALCO_RATE','abv_pct'],['SCAN_UPC','upc_scan']]},
+{title:'Distributor Hierarchy (4→1 level)',vip:'DIM_CORPORATION→DIM_MASTER_DIST→DIM_DISTRIBUTOR→DIM_DIST_VIP_LOC',our:'dim_distributor (flattened)',
+desc:'VIP tracks corporate ownership chains (e.g., Southern Glazer\'s → regional divisions → local branches → VIP locations). Sera Luce\'s 6 distributors are small enough to flatten.',
+rows:[['DIST_SID','distributor_sid'],['DIST_ID','distributor_id'],['DIST_NAME','distributor_name'],['— (importer is product-level)','importer_name (on dim_product)'],['PROV_STATE_CODE','states_covered'],['CRNT_IND','is_current'],['—','report_unit (★ new)'],['—','report_format (★ new)']]},
+{title:'Account (richest dimension)',vip:'DIM_RETAIL_ACCOUNT (50+ fields, 13 FKs)',our:'dim_account (20 fields, 4 FKs)',
+desc:'VIP\'s DIM_RETAIL_ACCOUNT is a massive snowflake with 13 FK references. We capture what\'s available from our 4 sources plus geocoding for the lookalike use case.',
+rows:[['RETL_ACCT_SID','account_sid'],['ACCT_ID','account_id'],['RETL_DOING_BIZ_AS_NAME','account_name'],['PREM_TYPE_SID','premise_type_sid (FK)'],['CHNL_FORMAT_SID','channel_format_sid (FK)'],['RETL_ACCT_STAT_SID','account_status_sid (FK)'],['DIST_SID','distributor_sid (FK)'],['CHAIN_DESC (via DIM_CHAIN)','chain_name'],['ACCT_ADDR_LINE_1_TEXT','addr_line_1'],['ACCT_CITY_TEXT','city'],['via DIM_PROVINCE_STATE','state_code'],['PSTL_ZIP9_CODE','zip_code'],['ACCT_LAT','latitude'],['ACCT_LONG','longitude'],['ACCT_FIPS_CODE','fips_code'],['ACCT_MSA_CODE','msa_code'],['—','license_nbr (★ from VS only)'],['OPEN_DATE','first_purchase_date'],['CRNT_IND','is_current']]},
+{title:'Date Dimension',vip:'DIM_TIME',our:'dim_date',
+desc:'Nearly 1:1 mapping. VIP includes fiscal week/month/quarter; we include fiscal_year with room to extend.',
+rows:[['TIME_SID','date_sid'],['CAL_DATE','cal_date'],['MTH_NBR','month_nbr'],['MTH_NAME','month_name'],['QTR_NBR','quarter_nbr'],['YR_NBR','year_nbr'],['US_WK_END_DATE','week_end_date'],['FIS_YR_NBR','fiscal_year'],['WKND_IND','is_weekend']]},
+{title:'Geography (3→1 table)',vip:'DIM_PROVINCE_STATE + DIM_COUNTY + DIM_CITY',our:'dim_geography',
+desc:'VIP normalizes geo into 3 linked tables. We flatten into one for simpler Census joins.',
+rows:[['PROV_STATE_CODE','state_code'],['PROV_STATE_NAME','state_name'],['COTY_NAME','county_name'],['COTY_FIPS_CODE','county_fips'],['ACCT_MSA_CODE','msa_code'],['—','dma_code (★ new)'],['STATE_IND (DIM_DISTRIBUTOR)','control_state']]}
+];
+document.getElementById('vip-ct').innerHTML=vipMaps.map(m=>`<div class="vc"><h3>${m.title}</h3><div class="vn">VIP: ${m.vip} → Our: ${m.our}</div><p style="font-size:.75rem;color:var(--txd);margin-bottom:.8rem">${m.desc}</p><div class="mh"><span>VIP USCOM v0.32</span><span></span><span>BevGenie (Sera Luce)</span></div>${m.rows.map(r=>`<div class="mr"><span class="vs">${r[0]}</span><span class="aw">→</span><span class="ss">${r[1]}</span></div>`).join('')}</div>`).join('');
+
+// ============ SOURCE MAPPING ============
+const sources=[
+{name:'Curated Wine Group',color:'var(--cwg)',cls:'cwg',states:'SC',grain:'Transaction (cartons)',
+fields:[
+['Wine','→ dim_product.product_name'],
+['Code','→ dim_product.product_code (X-SER-LUC-NV-CAN)'],
+['Bottle Size','→ Format detection (1000ml = 4-pack)'],
+['Pack Size / Unit Set','→ dim_product.units_per_pack'],
+['Importer','→ dim_distributor.master_distributor'],
+['Account','→ dim_account.account_name'],
+['Account ID','→ dim_account.account_id'],
+['Account Region','→ dim_geography.state_name'],
+['Account Type','→ dim_account.premise_type_sid (Retail→OFF, Restaurant→ON)'],
+['Sales Rep','→ dim_sales_rep.rep_full_name'],
+['Date','→ fact.date_sid (MM/DD/YYYY parse)'],
+['Quantity','→ fact.sold_qty (⚠️ CARTONS not cases! ÷6 for CE)'],
+['Invoice Number','→ fact.invoice_nbr'],
+['Shipping Street/City/State/Zip','→ dim_account.addr_line_1/city/state_code/zip_code'],
+['Product Family','→ Validation field']]},
+{name:'Artisans & Vines',color:'var(--av)',cls:'av',states:'DC, MD, VA',grain:'Order-level (cases)',
+fields:[
+['Customer Name','→ dim_account.account_name (strip DC-/MD-/VA- prefix for state)'],
+['On/Off Prem','→ dim_account.premise_type_sid (direct mapping)'],
+['State','→ dim_account.state_code (also in name prefix)'],
+['Rep','→ dim_sales_rep.rep_code (JOE, LARRY etc.)'],
+['Order Date','→ fact.date_sid (datetime parse)'],
+['QTY Ordered','→ fact.sold_qty (⚠️ usually cases; MD sometimes 4-packs)'],
+['Item','→ fact.product_sid (SL001-C=cans, SL002-K=keg)'],
+['Description','→ Unit detection hint ("6/4pk"=case, "4pk"=4-pack)'],
+['Volume Discount','→ fact.discount_amt (when present)'],
+['⚠️ Format changes monthly','Column structure not stable!']]},
+{name:'Sette Sei / Vintage Imports',color:'var(--vs)',cls:'vs',states:'NJ, PA',grain:'Apprise system (richest)',
+fields:[
+['Product Code','→ dim_product.product_code (SRLCNVCKVS I0/K0)'],
+['Product Description','→ dim_product.product_name'],
+['Brand','→ dim_product.brand'],
+['Unit Size','→ dim_product.unit_size_ml'],
+['ABV%','→ dim_product.abv_pct'],
+['UPC/EAN','→ dim_product.upc_scan'],
+['Base to Dflt Selling Rate','→ dim_product.ce_ratio (0.1667 = 1/6)'],
+['Package Format','→ dim_product_format.container_type'],
+['Customer Name','→ dim_account.account_name'],
+['Customer Division','→ dim_account.premise_type_sid (Off Premise/On Premise)'],
+['Customer Type Class','→ dim_channel_format.channel_name'],
+['Customer Group ID','→ dim_account.chain_name'],
+['Address 1/2, City, State, Postal','→ dim_account address fields'],
+['License #','→ dim_account.license_nbr (★ unique to this source)'],
+['CURRENT sales rep','→ dim_sales_rep.rep_code'],
+['Qty Sold, Base UM','→ fact.sold_qty (4-packs!)'],
+['Qty Sold, Dflt Selling UM','→ fact.sold_qty_ce (already cases!)'],
+['Dollars Sold','→ fact.gross_price / net_price'],
+['YearMoInteger','→ fact.date_sid (month-level only: 202512→20251201)']]},
+{name:'PAL (Pennsylvania Libations)',color:'var(--pal)',cls:'pal',states:'PA',grain:'Square POS (mixed retail+wholesale)',
+fields:[
+['Date','→ fact.date_sid (datetime)'],
+['Item','→ Product detection: "(Wholesale)" = B2B, else retail'],
+['Qty','→ fact.sold_qty (⚠️ unit depends on Price Point Name!)'],
+['Price Point Name','→ Unit parse: [CASE]=case, [1/6BBL]=keg, 4-Pack, else single can'],
+['SKU','→ Partial product code (250405R)'],
+['Gross Sales','→ fact.gross_price'],
+['Net Sales','→ fact.net_price'],
+['Discounts','→ fact.discount_amt'],
+['Transaction ID','→ fact.invoice_nbr'],
+['Customer Name','→ dim_account.account_name (wholesale only)'],
+['Customer ID','→ dim_account.account_id'],
+['Location','→ Premise hint (Pittsburgh Warehouse=ON, RTM Philly/Shadyside=OFF retail)'],
+['Employee','→ dim_sales_rep.rep_full_name'],
+['Unit','→ CE detection (ea=single can, 4-pk=four-pack)'],
+['⚠️ Mixes retail + wholesale','Must filter: wholesale to accounts vs retail to consumers']]}
+];
+document.getElementById('src-grid').innerHTML=sources.map(s=>`<div class="fc" style="border-left:3px solid ${s.color}"><h4><span class="fd" style="background:${s.color}"></span>${s.name}<span style="font-size:.65rem;color:var(--txd);font-weight:400;margin-left:auto">${s.states} · ${s.grain}</span></h4><ul class="fl">${s.fields.map(f=>{const[src,tgt]=typeof f==='string'?[f,'']:[f[0],f[1]];const warn=src.startsWith('⚠️');return`<li${warn?' style="color:var(--fact)"':''}><span class="fn">${src}</span>${tgt?`<span class="fa">→</span><span class="ft">${tgt.replace('→ ','')}</span>`:''}</li>`;}).join('')}</ul></div>`).join('');
+
+// ============ CE CONVERSION ============
+const ceData=[
+{icon:'🥫',name:'Single Can (250mL)',ce:'1/24',ceVal:'0.0417',color:'var(--acc)',
+formula:'1 can ÷ 24 cans/case = 0.0417 CE',
+note:'PAL retail: Unit="ea". Single 250mL can sold to consumer.',
+sources:'PAL: Price Point = "Sera Luce - Venetian Spritz" (no Wholesale, no 4-Pack)'},
+{icon:'📦',name:'4-Pack (4×250mL = 1L)',ce:'1/6',ceVal:'0.1667',color:'var(--dim)',
+formula:'1 four-pack ÷ 6 four-packs/case = 0.1667 CE',
+note:'Most common unit from CWG (cartons) and VS (Base UM). Also PAL 4-pk retail.',
+sources:'CWG: Quantity (cartons); VS: Qty Sold Base UM; PAL: Unit="4-pk"; A&V: some MD 4-packs'},
+{icon:'📋',name:'Case (6×4-packs = 6L)',ce:'1/1',ceVal:'1.0000',color:'var(--fact)',
+formula:'1 case = 1 case equivalent = 1.0 CE',
+note:'Standard wholesale unit. 6 four-packs = 24 cans = 6 liters.',
+sources:'A&V: QTY Ordered (standard); VS: Qty Sold Dflt Selling UM; PAL: [CASE] in Price Point'},
+{icon:'🍺',name:'20L Keg (1/6 BBL)',ce:'N/A',ceVal:'SEPARATE',color:'var(--vip)',
+formula:'Kegs tracked separately — NOT converted to case equivalents',
+note:'Different economics, different accounts (on-premise). VIP would use CE_RATIO=3.33 (20L÷6L) but we track as keg_qty.',
+sources:'CWG: X-KEG-SER-LUC-NV; A&V: SL002-K; VS: SRLCNVCKVS K0; PAL: [1/6BBL]'}
+];
+document.getElementById('ce-ct').innerHTML=`
+<div style="background:var(--bg2);border:1px solid var(--factbd);border-radius:10px;padding:1.2rem;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem"><span style="font-size:1.2rem">★</span><span style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--fact);font-weight:600">VIP Design Pattern: CE_RATIO at Product Level</span></div>
+  <p style="font-size:.78rem;color:var(--tx);margin-bottom:.5rem">In VIP's DIM_PRODUCT_ITEM, every SKU has a CE_RATIO field. This means <b>unit conversion is a data property, not ETL logic</b>. When calculating case equivalents:</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--acc);background:rgba(59,130,246,.06);padding:.5rem .8rem;border-radius:6px;margin:.5rem 0">sold_qty_ce = fact.sold_qty × dim_product.ce_ratio</div>
+  <p style="font-size:.75rem;color:var(--txd)">This is dramatically cleaner than putting conversion logic in ETL. If Sera Luce adds a new format (e.g., 355mL can), just add a product row with the right ce_ratio — no ETL code changes.</p>
+</div>
+<div class="cg">${ceData.map(c=>`<div class="cc"><div class="cch"><span class="ci">${c.icon}</span><h4>${c.name}</h4><span class="cv" style="color:${c.color}">${c.ceVal}</span></div><div class="ccb"><div class="fm">${c.formula}</div><p style="margin-bottom:.3rem">${c.note}</p><p style="font-size:.65rem;color:var(--txd);margin-top:.4rem"><b>Sources:</b> ${c.sources}</p></div></div>`).join('')}</div>
+<div style="margin-top:1.5rem;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:1.2rem">
+  <h4 style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;margin-bottom:.8rem">December 2025 Validation Totals</h4>
+  <table class="dt"><thead><tr><th>Source</th><th>States</th><th>Cases (CE)</th><th>Kegs</th><th>$ Value</th><th>Accounts</th></tr></thead><tbody>
+  <tr><td><span class="stag cwg">CWG</span></td><td>SC</td><td>~2.5</td><td>2</td><td>—</td><td>3</td></tr>
+  <tr><td><span class="stag av">A&V</span></td><td>DC,MD,VA</td><td>~21.7</td><td>0</td><td>—</td><td>~10</td></tr>
+  <tr><td><span class="stag vs">VS</span></td><td>NJ,PA</td><td>15</td><td>0</td><td>$1,274</td><td>6</td></tr>
+  <tr><td><span class="stag pal">PAL</span></td><td>PA</td><td>~6.7</td><td>4</td><td>$1,594</td><td>~9</td></tr>
+  <tr style="font-weight:700;border-top:2px solid var(--bdr)"><td>TOTAL</td><td>6 states</td><td style="color:var(--fact)">~45.9</td><td style="color:var(--vip)">6</td><td>$2,868+</td><td>~28</td></tr>
+  </tbody></table>
+</div>`;
+
+// ============ HIERARCHY ============
+document.getElementById('hier-ct').innerHTML=`
+<div class="hbox">
+  <h3 style="font-family:'IBM Plex Mono',monospace;font-size:.95rem;margin-bottom:.3rem;color:var(--dim)">Product Hierarchy</h3>
+  <p style="font-size:.72rem;color:var(--txd);margin-bottom:1rem">VIP: 7 levels for Mark Anthony Brands (White Claw, Mike's Hard, etc.) → We flatten to 4 for Sera Luce's simple catalog</p>
+  <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:1rem;align-items:start">
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--vip);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.1em">VIP USCOM (7 levels)</div>
+      <ul class="htree"><li><span class="hn"><span class="hv">DIM_COMPANY_ENTITY</span> Mark Anthony Brands</span>
+        <ul><li><span class="hn"><span class="hv">DIM_BUSINESS_SEGMENT</span> Beyond Beer</span>
+          <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_CATEGORY</span> FMB / RTD</span>
+            <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_BRAND</span> White Claw</span>
+              <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_SUB_BRAND</span> Surge</span>
+                <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_FLAVOR</span> Blood Orange</span>
+                  <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_TYPE</span> Can 12oz</span>
+                    <ul><li><span class="hn"><span class="hv">DIM_PRODUCT_ITEM</span> SKU: WC-SURGE-BO-12</span></li></ul>
+                  </li></ul>
+                </li></ul>
+              </li></ul>
+            </li></ul>
+          </li></ul>
+        </li></ul>
+      </li></ul>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--acc);font-size:1.5rem">→</div>
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sera);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.1em">BevGenie Sera Luce (flattened)</div>
+      <ul class="htree"><li><span class="hn"><span class="hs">brand</span> Sera Luce</span>
+        <ul><li><span class="hn"><span class="hs">sub_brand + product_class</span> Venetian Spritz · RTD</span>
+          <ul><li><span class="hn"><span class="hs">product_format_sid</span> Can 250mL <span style="font-size:.6rem;color:var(--txd)">(ce_ratio=1/6 per 4-pk)</span></span>
+            <ul>
+              <li><span class="hn"><span class="hs">product_code</span> SL-CAN-250 (single)</span></li>
+              <li><span class="hn"><span class="hs">product_code</span> SL-4PK (four-pack)</span></li>
+              <li><span class="hn"><span class="hs">product_code</span> SL-CASE (case of 6×4pk)</span></li>
+            </ul>
+          </li>
+          <li><span class="hn"><span class="hs">product_format_sid</span> Keg 20L <span style="font-size:.6rem;color:var(--txd)">(ce_ratio=NULL, tracked separately)</span></span>
+            <ul>
+              <li><span class="hn"><span class="hs">product_code</span> SL-KEG-20L (sparkling)</span></li>
+              <li><span class="hn"><span class="hs">product_code</span> SL-KEG-FLAT (still)</span></li>
+            </ul>
+          </li></ul>
+        </li></ul>
+      </li></ul>
+    </div>
+  </div>
+</div>
+<div class="hbox">
+  <h3 style="font-family:'IBM Plex Mono',monospace;font-size:.95rem;margin-bottom:.3rem;color:var(--dim)">Distributor Hierarchy</h3>
+  <p style="font-size:.72rem;color:var(--txd);margin-bottom:1rem">VIP: 4 levels for enterprise distributors like Southern Glazer's → We flatten for 6 small distributors</p>
+  <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:1rem;align-items:start">
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--vip);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.1em">VIP USCOM (4 levels)</div>
+      <ul class="htree"><li><span class="hn"><span class="hv">DIM_CORPORATION</span> Southern Glazer's</span>
+        <ul><li><span class="hn"><span class="hv">DIM_MASTER_DISTRIBUTOR</span> SGW Mid-Atlantic</span>
+          <ul><li><span class="hn"><span class="hv">DIM_DISTRIBUTOR</span> SGW Virginia</span>
+            <ul><li><span class="hn"><span class="hv">DIM_DIST_VIP_LOCATION</span> Richmond Branch</span></li></ul>
+          </li></ul>
+        </li></ul>
+      </li></ul>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--acc);font-size:1.5rem">→</div>
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sera);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.1em">BevGenie Sera Luce (flat)</div>
+      <ul class="htree">
+        <li><span class="hn"><span class="hs">dim_distributor</span> Sette Sei/American Spirits Exchange <span style="font-size:.6rem;color:var(--txd)">(master)</span></span>
+          <ul>
+            <li><span class="hn">→ <span class="hs">CWG</span> Curated Wine Group (SC) <span class="stag cwg">cartons</span></span></li>
+            <li><span class="hn">→ <span class="hs">VS</span> Vintage Imports (NJ,PA) <span class="stag vs">base UM</span></span></li>
+          </ul>
+        </li>
+        <li><span class="hn"><span class="hs">dim_distributor</span> Artisans & Vines (DC,MD,VA) <span class="stag av">cases</span></span></li>
+        <li><span class="hn"><span class="hs">dim_distributor</span> PA Libations (PA) <span class="stag pal">POS mixed</span></span></li>
+        <li><span class="hn" style="color:var(--txd)"><span class="hs" style="opacity:.5">dim_distributor</span> Orsini (NC) <span class="stag hist">historical only</span></span></li>
+        <li><span class="hn" style="color:var(--txd)"><span class="hs" style="opacity:.5">dim_distributor</span> Banville (VA) <span class="stag hist">historical only</span></span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="hbox">
+  <h3 style="font-family:'IBM Plex Mono',monospace;font-size:.95rem;margin-bottom:.3rem;color:var(--dim)">Account Hierarchy</h3>
+  <p style="font-size:.72rem;color:var(--txd);margin-bottom:.6rem">VIP's DIM_RETAIL_ACCOUNT has 13 FK references. Our dim_account captures 4 FKs from available data, extensible as data sources grow.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem">
+    ${['premise_type|On/Off Premise|ALL 4 sources|DIM_PREMISE_TYPE','channel_format|Fine Wine Store, Restaurant...|VS only|DIM_CHANNEL_FORMAT+COT','account_status|Active/Inactive|Derived from last purchase|DIM_RETAIL_ACCT_STATUS','distributor|Servicing distributor|From source file|DIM_DISTRIBUTOR (implicit FK)'].map(f=>{const[k,v,src,vipn]=f.split('|');return`<div style="background:rgba(16,185,129,.05);border:1px solid var(--dimbd);border-radius:8px;padding:.6rem;font-family:'IBM Plex Mono',monospace;font-size:.65rem"><div style="color:var(--dim);font-weight:600;margin-bottom:.2rem">${k}</div><div style="color:var(--tx);margin-bottom:.15rem">${v}</div><div style="color:var(--txd);font-size:.6rem">Source: ${src}</div><div style="color:var(--vip);font-size:.58rem;margin-top:.15rem">VIP: ${vipn}</div></div>`;}).join('')}
+  </div>
+</div>`;
+
+// ============ PIPELINE ============
+document.getElementById('pipe-ct').innerHTML=`
+<div class="pstep">
+  <div class="ps" style="border-left:3px solid var(--acc)"><h4 style="color:var(--acc)">1. EXTRACT</h4><p>Read 4 distributor Excel files. Handle: varying headers (A&V scans rows 0-5), multiple sheets (A&V: month tabs; VS: 7 sheets), mixed formats.</p><div class="pvip">VIP: Receives standardized EDI feeds</div></div>
+  <div class="ps" style="border-left:3px solid var(--vs)"><h4 style="color:var(--vs)">2. STAGE</h4><p>Load raw data into 4 staging tables (stg_curated, stg_artisans, stg_vintage, stg_pal) preserving original columns. Tag source_system.</p><div class="pvip">VIP: ODS staging area</div></div>
+  <div class="ps" style="border-left:3px solid var(--fact)"><h4 style="color:var(--fact)">3. TRANSFORM</h4><p><b>Unit normalization</b> via CE_RATIO. <b>Entity resolution</b> for accounts. <b>State extraction</b> from A&V name prefixes. <b>Premise classification</b>. <b>Date standardization</b>.</p><div class="pvip">VIP: CE_RATIO stored in DIM_PRODUCT_ITEM</div></div>
+  <div class="ps" style="border-left:3px solid var(--dim)"><h4 style="color:var(--dim)">4. LOAD</h4><p>Dimensions first (SCD2 for accounts, distributors). Then fact_depletion with FK lookups. Integer joins only (Doug's rule).</p><div class="pvip">VIP: Same — dims before facts</div></div>
+  <div class="ps" style="border-left:3px solid var(--ref)"><h4 style="color:var(--ref)">5. VALIDATE</h4><p>Compare monthly CE totals against Justin's historical file. Build v_monthly_depletion view. Calculate R3/R6/R12 rolling metrics.</p><div class="pvip">VIP: FACT_SUMMARY_SALES + non-reporter tracking</div></div>
+</div>
+<div class="hbox">
+  <h4 style="font-family:'IBM Plex Mono',monospace;font-size:.88rem;margin-bottom:.8rem">Key Transform Challenges</h4>
+  <table class="dt"><thead><tr><th>Challenge</th><th>Source</th><th>Solution</th><th>VIP Parallel</th></tr></thead><tbody>
+  <tr><td>Cartons ≠ Cases</td><td><span class="stag cwg">CWG</span></td><td>Apply ce_ratio=1/6 per carton (= 4-pack)</td><td>CE_RATIO in DIM_PRODUCT_ITEM</td></tr>
+  <tr><td>MD 4-pack anomaly</td><td><span class="stag av">A&V</span></td><td>Check Description field for "4pk" hint; cross-validate with invoices</td><td>UOM standardization in EDI</td></tr>
+  <tr><td>Month-level dates only</td><td><span class="stag vs">VS</span></td><td>Use 1st of month as proxy (date_sid=YYYYMM01)</td><td>DIM_TIME supports monthly grain</td></tr>
+  <tr><td>Retail + wholesale mixed</td><td><span class="stag pal">PAL</span></td><td>Parse Item name: "(Wholesale)"=B2B, else=retail consumer</td><td>PREM_TYPE_SID distinguishes</td></tr>
+  <tr><td>Account name variants</td><td>ALL</td><td>Entity resolution: fuzzy match + manual mapping table</td><td>CLSD_ACCT_ID + ACCT_ID linking</td></tr>
+  <tr><td>Missing prices</td><td><span class="stag cwg">CWG</span> <span class="stag av">A&V</span></td><td>NULL for gross_price/net_price; only VS and PAL have $ data</td><td>VIP: both FRLN_PRICE and NET_PRICE populated</td></tr>
+  </tbody></table>
+</div>`;
+
+// ============ INIT ============
+// SVG ER - no renderER needed
+
+function showBizDetail(id) {
+  const details = {
+    product_can: {title:'250mL Cans (Venetian Spritz)',desc:'Sera Luce\'s core product. 250mL aluminum cans sold primarily as 4-packs. Six 4-packs make a case (6 liters total, 24 cans). Different distributors report in different units — cartons (CWG), cases (A&V), base UM/4-packs (VS), or individual cans (PAL retail). The CE_RATIO on dim_product normalizes everything to cases.',model:'dim_product rows: SL-CAN-250 (single, ce=0.0417), SL-4PK (four-pack, ce=0.1667), SL-CASE (case of 6×4pk, ce=1.0)'},
+    product_keg: {title:'20L Kegs (1/6 BBL)',desc:'For on-premise (bars, restaurants). 20-liter kegs, sometimes called 1/6 barrel. Tracked separately from cans because the economics are completely different — different price point, different accounts, different sales cycle. We do NOT convert kegs to case equivalents.',model:'dim_product rows: SL-KEG-20L (sparkling), SL-KEG-FLAT (still/flat). ce_ratio = NULL. Tracked as separate keg_qty.'},
+    importer: {title:'Sette Sei / American Spirits Exchange (Importer)',desc:'This is NOT a distributor — it\'s the importer. Sette Sei handles bringing Sera Luce into the US market, manages the TTB COLA federal approvals, and then routes the product to actual distributors (CWG, A&V, Vintage, PAL). In the three-tier system, the importer sits between the producer and the distributors. Some of the distributor reports reference Sette Sei as "Supplier" or "Importer" — that\'s correct, but they don\'t distribute to retail accounts.',model:'Lives on dim_product.importer_name = "Sette Sei / American Spirits Exchange". NOT in dim_distributor.'},
+    dist_cwg: {title:'Curated Wine Group (South Carolina)',desc:'Covers South Carolina. Reports depletions in CARTONS (which are actually 4-packs, not cases!). 15 cartons = 2.5 cases. Also reports kegs separately. Has full shipping addresses for accounts. Uses "Importer" field to reference Sette Sei.',model:'dim_distributor: id=CWG, states=SC, report_unit=cartons. CE conversion: qty ÷ 6.'},
+    dist_av: {title:'Artisans & Vines (DC, MD, VA)',desc:'Covers DC, Maryland, Virginia. The most challenging source — format changes monthly, column names shift, has 22+ monthly tabs. Customer names include state prefixes (DC-Bar Name, MD-Store Name). Usually reports in cases but sometimes MD accounts show 4-packs instead.',model:'dim_distributor: id=AV, states=DC/MD/VA, report_unit=cases (usually). ⚠️ Format instability.'},
+    dist_vs: {title:'Vintage Imports / Sette Sei (NJ, PA)',desc:'Covers New Jersey, Pennsylvania. BY FAR the richest data source — uses the Apprise system which provides product details (ABV, UPC, package format), customer details (address, license #, chain affiliation, customer type), and proper case conversion rates. Has 7 sheets including product info and customer info.',model:'dim_distributor: id=VS, states=NJ/PA, report_unit=base UM (4-packs). Note: "Dflt Selling UM" column already shows cases.'},
+    dist_pal: {title:'PA Libations (Pennsylvania)',desc:'Covers Pennsylvania. Uses Square POS, which means it mixes retail consumer sales (single cans, 4-packs sold at their tasting room/store) with wholesale B2B sales (cases and kegs to accounts). You have to parse the "Price Point Name" and "Item" fields to figure out which is which — "(Wholesale)" in Item name = B2B.',model:'dim_distributor: id=PAL, states=PA, report_unit=mixed. Must separate retail vs wholesale.'},
+    acct_on: {title:'On-Premise Accounts (Bars, Restaurants)',desc:'Bars, restaurants, hotels, event venues that serve Sera Luce by the drink or by the keg. These are higher-margin accounts but lower volume per account. Justin cares about these for brand building — getting Sera Luce on cocktail menus and as a featured aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "ON". Sources: CWG Account Type="Restaurant", A&V On/Off="On Prem", VS Customer Division="On Premise".'},
+    acct_off: {title:'Off-Premise Accounts (Wine Shops, Liquor Stores)',desc:'Retail stores where consumers buy 4-packs and cases to take home. These are the volume drivers. Fine wine shops are particularly important for Sera Luce\'s positioning as a premium Italian aperitif.',model:'dim_account.premise_type_sid → dim_premise_type.code = "OFF". VS data also gives channel_format (Fine Wine Store, Package Store, etc.)'},
+    acct_retail: {title:'Grocery & Supermarket Chains',desc:'Larger retail chains (Total Wine, Whole Foods, etc.) with multiple locations. These accounts have a chain_name in our data and represent potential for rapid geographic expansion if a chain buyer approves Sera Luce.',model:'dim_account.chain_name populated (from VS Customer Group ID). Higher ACV (all commodity volume) potential.'},
+    acct_detail: {title:'Account Details for Lookalike Matching',desc:'This is THE BevGenie use case: "Find me more accounts like my best performers." To do this, we need rich account data — address (for geocoding), ZIP code (for Census demographic joins via FIPS), license number (for state license databases), premise type, channel format, chain affiliation, and purchase history (first/last purchase dates, rolling totals).',model:'dim_account has 20 fields including addr, city, state, zip, lat/long, fips_code, msa_code, license_nbr, first/last_purchase_date. Joins to dim_geography and Census data.'},
+  };
+  const d = details[id];
+  if(!d) return;
+  const p = document.getElementById('dp'), ct = document.getElementById('dpc');
+  ct.innerHTML = '<h2 style="color:var(--sera)">' + d.title + '</h2><p style="font-size:.82rem;color:var(--tx);margin:1rem 0;line-height:1.7">' + d.desc + '</p><div style="background:rgba(16,185,129,.06);border:1px solid var(--dimbd);border-radius:8px;padding:.8rem;margin-top:1rem"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:.7rem;color:var(--dim);font-weight:600;margin-bottom:.3rem">📐 Data Model Mapping</div><div style="font-size:.75rem;color:var(--tx)">' + d.model + '</div></div>';
+  p.classList.add('open');
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD();});
+
+
+
+
+// ER Diagram: click handler for SVG tables
+document.querySelectorAll('#er-svg .tbl').forEach(function(g) {
+  g.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var tableId = this.getAttribute('data-id');
+    if (tableId && typeof T !== 'undefined' && T[tableId]) {
+      openD(tableId);
+    }
+  });
+  g.addEventListener('mouseenter', function() {
+    this.querySelector('rect').setAttribute('stroke', '#3b82f6');
+    this.querySelector('rect').setAttribute('stroke-width', '2.5');
+  });
+  g.addEventListener('mouseleave', function() {
+    this.querySelector('rect').setAttribute('stroke', '#1e293b');
+    this.querySelector('rect').setAttribute('stroke-width', '1.5');
+  });
+});
+
+// Close detail panel on background click
+document.getElementById('er-container').addEventListener('click', function(e) {
+  if (!e.target.closest('.tbl')) closeD();
+});
+
+</script>
+
+</body>
+</html>
